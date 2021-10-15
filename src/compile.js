@@ -1418,7 +1418,7 @@ Compiler.prototype.clabel = function (s) {
     this._jump(top);
     this.setBlock(top);
 
-    if ((Sk.debugging || Sk.killableWhile) && this.u.canSuspend) {
+    if (Sk.debugging && this.u.canSuspend) {
         var suspType = "Sk.delay";
         var debugBlock = this.newBlock("debug breakpoint for line "+s.lineno);
         out("if (Sk.breakpoints('"+this.filename+"',"+s.lineno+","+s.col_offset+")) {",
@@ -1520,7 +1520,7 @@ Compiler.prototype.cforever = function (s) {
 
     this.setBlock(body);
 
-    if ((Sk.debugging || Sk.killableWhile) && this.u.canSuspend) {
+    if ((Sk.debugging || Sk.killableFor) && this.u.canSuspend) {
         var suspType = "Sk.delay";
         var debugBlock = this.newBlock("debug breakpoint for line "+s.lineno);
         out("if (Sk.breakpoints('"+this.filename+"',"+s.lineno+","+s.col_offset+")) {",
