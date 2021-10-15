@@ -1520,7 +1520,7 @@ Compiler.prototype.cforever = function (s) {
 
     this.setBlock(body);
 
-    if ((Sk.debugging || Sk.killableFor) && this.u.canSuspend) {
+    if ((Sk.debugging || Sk.killableForever) && this.u.canSuspend) {
         var suspType = "Sk.delay";
         var debugBlock = this.newBlock("debug breakpoint for line "+s.lineno);
         out("if (Sk.breakpoints('"+this.filename+"',"+s.lineno+","+s.col_offset+")) {",
