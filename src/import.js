@@ -200,6 +200,12 @@ Sk.importModuleInternal_ = function (name, dumpJS, modname, suppliedPyBody, rela
                 });
 
             }
+            if (Sk.onAfterCompile && typeof Sk.onAfterCompile === "function") {
+                try {
+                    co.code = Sk.onAfterCompile(name, co.code);
+                } catch (e) {
+                }
+            }              
             return co;
 
         }, function(co) {
