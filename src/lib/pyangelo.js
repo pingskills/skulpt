@@ -34,6 +34,11 @@ var $builtinmodule = function(name)
         
     Sk.builtins.animationFrameRequest = window.requestAnimationFrame(render);
     
+    function _convY(y)
+    {
+        return canvas.height - y;
+    }
+    
     function render(timestamp) {
         
         if (_activeCommands != null)
@@ -71,7 +76,7 @@ var $builtinmodule = function(name)
     {
         ctx.fillStyle = args.fillStyle;
         ctx.font = args.font;
-        ctx.fillText(args.text, args.x, args.y);
+        ctx.fillText(args.text, args.x, _convY(args.y));
     }
 
     function _drawRect(args)
@@ -79,14 +84,14 @@ var $builtinmodule = function(name)
         ctx.lineWidth = args.lineWidth;
         ctx.strokeStyle = args.strokeStyle;
         ctx.beginPath();
-        ctx.rect(args.x, args.y, args.width, args.height);
+        ctx.rect(args.x, args.y, args.width, _convY(args.height));
         ctx.stroke();        
     }
     
     function _fillRect(args)
     {
         ctx.fillStyle = args.fillStyle;
-        ctx.fillRect(args.x, args.y, args.width, args.height);
+        ctx.fillRect(args.x, args.y, args.width, _convY(args.height));
     }
     
     function _keyUpListener(e)
