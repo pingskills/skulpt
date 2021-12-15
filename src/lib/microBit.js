@@ -398,6 +398,131 @@ var $builtinmodule = function(name)
 
     var mod = {};
     
+    mod.Microbit = Sk.misceval.buildClass(mod, function($gbl, $loc) {
+        $loc.__init__ = new Sk.builtin.func(function(self) {         
+            filters: []
+            var options = {};
+            options.acceptAllDevices = true;
+            options.optionalServices = [ACCEL_SRV, MAGNETO_SRV, BTN_SRV, IO_PIN_SRV, LED_SRV, TEMP_SRV];
+
+            console.log('Requesting Bluetooth Device...');
+            console.log('with ' + JSON.stringify(options));
+
+            self.microBit = new uBit();
+                       
+            self.device = null;
+            
+            self.buttonA = new Sk.builtin.int_(0);
+            self.buttonB = new Sk.builtin.int_(0);        
+            self.accX = new Sk.builtin.float_(0);
+            self.accY = new Sk.builtin.float_(0);
+            self.accZ = new Sk.builtin.float_(0);
+            self.temp = new Sk.builtin.float_(0);
+            self.bearing = new Sk.builtin.float_(0);             
+
+            navigator.bluetooth.requestDevice(options)
+            .then(device => {
+
+                self.device = device;
+                console.log('> Name:             ' + device.name);
+                console.log('> Id:               ' + device.id);
+
+                // Attempts to connect to remote GATT Server.
+                return device.gatt.connect();
+
+            })
+            .then(server => {
+              // Note that we could also get all services that match a specific UUID by
+              // passing it to getPrimaryServices().
+              console.log('Getting Services...');
+              return server.getPrimaryServices();
+            })
+            .then(services => {
+              console.log('Getting Characteristics...');
+              let queue = Promise.resolve();
+              services.forEach(service => {
+                queue = queue.then(_ => service.getCharacteristics().then(characteristics => {
+                  console.log('> Service: ' + service.uuid);
+                  characteristics.forEach(characteristic => {
+                    console.log('>> Characteristic: ' + characteristic.uuid + ' ' +
+                      getSupportedProperties(characteristic));
+
+                    //need to store all the characteristic I want to write to be able to access them later.
+                    switch (characteristic.uuid) {
+                      case IO_PIN_DATA:
+                        self.microBit.characteristic.IO_PIN_DATA = characteristic;
+                        break;
+
+                      case IO_AD_CONFIG:
+                        self.microBit.characteristic.IO_AD_CONFIG = characteristic;
+                        break;
+
+                      case IO_PIN_CONFIG:
+                        self.microBit.characteristic.IO_PIN_CONFIG = characteristic;
+                        break;
+
+                      case IO_PIN_PWM:
+                        self.microBit.characteristic.IO_PIN_PWM = characteristic;
+                        break;
+
+                      case LED_STATE:
+                        self.microBit.characteristic.LED_STATE = characteristic;
+                        self.microBit.connected = true;
+
+                        break;
+
+                      case LED_TEXT:
+                        self.microBit.characteristic.LED_TEXT = characteristic;
+                        break;
+
+                      case LED_SCROLL:
+                        self.microBit.characteristic.LED_SCROLL = characteristic;
+                        break;
+
+                      default:
+                    }
+
+                    if (getSupportedProperties(characteristic).includes('NOTIFY')) {
+                      characteristic.startNotifications().catch(err => console.log('startNotifications', err));
+                      characteristic.addEventListener('characteristicvaluechanged',
+                        self.microBit.characteristic_updated.bind(self.microBit));
+                    }
+                  });
+                }));
+              });
+              
+              
+              return queue;
+            })
+            .catch(error => {
+              console.log('Argh! ' + error);
+            });
+
+            return;
+        });
+    
+        $loc.setText = new Sk.builtin.func((self, scrollText) => {
+          var text = "" + scrollText;
+          console.log("Updating Scrolling text:" + text);
+          self.microBit.writeMatrixText(text);
+          return new Sk.builtin.none;  
+        });      
+
+        $loc.isConnected = new Sk.builtin.func((self) => {
+            return new Sk.builtin.bool(self.microBit.connected);   
+        });
+        
+        $loc.getName = new Sk.builtin.func((self) => {
+            return new Sk.builtin.str(self.device.name);
+        });
+        
+        $loc.getButtonA = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.buttonA);
+        });
+    },
+    'Microbit', []);
+
+    
     mod.isConnected = new Sk.builtin.bool(false); 
     mod.buttonA = new Sk.builtin.int_(0);
     mod.buttonB = new Sk.builtin.int_(0);
@@ -449,8 +574,8 @@ var $builtinmodule = function(name)
         mod.accZ = new Sk.builtin.float_(mod.microBit.getAccelerometer().z);
         mod.temp = new Sk.builtin.float_(mod.microBit.getTemperature());
         mod.bearing = new Sk.builtin.float_(mod.microBit.getBearing());      
-    })           
-    
+    })   
+   
     mod.getAccelerometer = new Sk.builtin.func(() => {
       return new Sk.builtin.list([new Sk.builtin.int_(mod.microBit.getAccelerometer().x), new Sk.builtin.int_(mod.microBit.getAccelerometer().y), new Sk.builtin.int_(mod.microBit.getAccelerometer().z)]);   
     });   
