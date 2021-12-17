@@ -396,6 +396,7 @@ var $builtinmodule = function(name)
       ['1', '0', '0', '0', '1']
     ]    
 
+
     var mod = {};
     
     mod.Microbit = Sk.misceval.buildClass(mod, function($gbl, $loc) {
@@ -409,16 +410,82 @@ var $builtinmodule = function(name)
             console.log('with ' + JSON.stringify(options));
 
             self.microBit = new uBit();
+			
+			self.writableHandle = null;
+			self.interval = null;
+			self.isRecording = false;
+			
+			self.recordButtonA = async function() {
+				if (self.writableHandle !== null)
+				{
+					await self.writableHandle.write(new Date().toLocaleString() + ",A\n");
+				}
+			};
+			
+			self.recordButtonB = async function() {
+				if (self.writableHandle !== null)
+				{
+					await self.writableHandle.write(new Date().toLocaleString() + ",B\n");
+				}
+			};
                        
-            self.device = null;
-            
-            self.buttonA = new Sk.builtin.int_(0);
-            self.buttonB = new Sk.builtin.int_(0);        
-            self.accX = new Sk.builtin.float_(0);
-            self.accY = new Sk.builtin.float_(0);
-            self.accZ = new Sk.builtin.float_(0);
-            self.temp = new Sk.builtin.float_(0);
-            self.bearing = new Sk.builtin.float_(0);             
+
+			self.stopRecordData = async function()
+			{
+				if (self.interval !== null)
+				{
+					window.clearInterval(self.interval);
+					self.interval = null;
+				}
+				if (self.writableHandle !== null)
+				{
+					// Close the file and write the contents to disk.
+					await self.writableHandle.close();
+					self.writableHandle = null;
+				}
+				self.isRecording = false;
+			}
+			
+			self.recordTemp = async function()
+			{
+				await self.writableHandle.write(new Date().toLocaleString() + "," + self.microBit.temperature + "\n");
+			}
+			
+			self.recordAccelerometer = async function()
+			{
+				await self.writableHandle.write(new Date().toLocaleString() + "," + self.microBit.accelerometer.x + "," + self.microBit.accelerometer.y + "," + self.microBit.accelerometer.z + "\n");
+			}
+			
+			self.microBit.setButtonACallback(self.recordButtonA);
+			
+			self.microBit.setButtonBCallback(self.recordButtonB);
+			
+			
+			self.recordDataFunc = async function(interval)
+			{
+			  const options = {
+				suggestedName: filename,
+				types: [
+				  {
+					
+					description: 'Text Files',
+					accept: {
+					  'text/plain': ['.txt'],
+					},
+				  },
+				],
+			  };
+			  const fileHandle = await window.showSaveFilePicker(options);
+			  
+			  self.writableHandle = await fileHandle.createWritable();
+			  
+			  if (interval > 0)
+			  {
+				  //self.interval = window.setInterval(self.recordTemp, interval);
+				  self.interval = window.setInterval(self.recordAccelerometer, interval);
+			  }
+			  self.isRecording = true;
+			}			
 
             navigator.bluetooth.requestDevice(options)
             .then(device => {
@@ -519,6 +586,55 @@ var $builtinmodule = function(name)
         $loc.getButtonA = new Sk.builtin.func((self) => {
             return new Sk.builtin.int_(self.microBit.buttonA);
         });
+		
+        $loc.getButtonB = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.buttonB);
+        });
+		
+		$loc.getTemperature = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.temperature);
+        });
+		
+		$loc.getBearing = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.magnetometer_bearing);
+        });
+		
+		$loc.getAccelerometerX = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.accelerometer.x);
+        });
+		
+		$loc.getAccelerometerY = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.accelerometer.y);
+        });
+		
+		$loc.getAccelerometerZ = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.accelerometer.z);
+        });
+		
+		$loc.recordData = new Sk.builtin.func((self, interval) => {
+			let modal = document.querySelector(".modal");
+			let closeBtn = document.querySelector(".close-btn");
+			let okBtn = document.querySelector(".ok-btn");
+			
+			modal.style.display = "block";
+			
+			closeBtn.onclick = function(){
+			  modal.style.display = "none";
+			}
+			okBtn.onclick = function(){
+			  modal.style.display = "none";
+			  self.recordDataFunc(interval);
+			}
+        });
+		
+		$loc.stopRecordData = new Sk.builtin.func((self) => {
+			self.stopRecordData();
+        });
+		
+		$loc.isRecording = new Sk.builtin.func((self) => {
+			return new Sk.builtin.bool(self.isRecording);  
+		});
+
     },
     'Microbit', []);
 

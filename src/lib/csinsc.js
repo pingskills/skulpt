@@ -40,6 +40,11 @@ var $builtinmodule = function(name)
     
     var synth = window.speechSynthesis;
     var voices = [];
+	
+	mod.listening = false;
+	mod.speechRecognition = null;
+	mod.final_transcript = "";
+	mod.interim_transcript = "";
     
     function populateVoiceList() {
       voices = synth.getVoices();
@@ -50,13 +55,68 @@ var $builtinmodule = function(name)
       speechSynthesis.onvoiceschanged = populateVoiceList;
     }
     
-    mod.say = new Sk.builtin.func((text) => {        
+    mod.say = new Sk.builtin.func((text, voice) => {        
         
         var utterThis = new SpeechSynthesisUtterance(text);
-        utterThis.voice = voices[0];
+		if (voice >= voices.length)
+			voice = 0;
+        utterThis.voice = voices[voice];
         utterThis.pitch = 1;
         utterThis.rate = 1;
         synth.speak(utterThis);        
+        
+        return new Sk.builtin.none;        
+    });
+	
+	mod.isListening = new Sk.builtin.func(() => {   
+		return new Sk.builtin.bool(mod.listening);
+	});
+	
+	mod.getFinalTranscript = new Sk.builtin.func(() => {   
+		return new Sk.builtin.str(mod.final_transcript);
+	});
+	
+	mod.listen = new Sk.builtin.func(() => {        
+        
+		if ("webkitSpeechRecognition" in window) {
+			if (mod.listening) {
+				mod.speechRecognition.stop();
+			}
+			mod.listening = true;
+			mod.final_transcript = "";
+				
+			mod.speechRecognition = new webkitSpeechRecognition();
+			
+			mod.speechRecognition.continuous = true;
+			mod.speechRecognition.interimResults = true;
+			mod.speechRecognition.lang = "en-AU";
+
+			mod.speechRecognition.onerror = () => {
+				console.log("Speech Recognition Error");
+			};
+			mod.speechRecognition.onend = () => {
+				console.log("Speech Recognition Ended");
+				console.log("Final transcript" + mod.final_transcript)
+			};
+
+			mod.speechRecognition.onresult = (event) => {
+				mod.interim_transcript = "";
+
+				for (let i = event.resultIndex; i < event.results.length; ++i) {
+				  if (event.results[i].isFinal) {
+					mod.final_transcript += event.results[i][0].transcript;
+					mod.speechRecognition.stop();
+					mod.listening = false;
+				  } else {
+					mod.interim_transcript += event.results[i][0].transcript;
+				  }
+				}
+			};
+			
+			mod.speechRecognition.start();
+		} else {
+		  console.log("Speech Recognition Not Available");
+		} 
         
         return new Sk.builtin.none;        
     });
