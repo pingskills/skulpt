@@ -446,6 +446,14 @@ var $builtinmodule = function(name)
 				self.isRecording = false;
 			}
 			
+			self.recordTempAccelerometer = async function()
+			{
+				var now = new Date();
+				var ms = "00" + now.getMilliseconds();
+				var strNow = now.toLocaleString() + "," + ms.substr(ms.length - 3);
+				await self.writableHandle.write(strNow + "," + self.microBit.temperature + "," + self.microBit.accelerometer.x + "," + self.microBit.accelerometer.y + "," + self.microBit.accelerometer.z + "\n");
+			}
+			
 			self.recordTemp = async function()
 			{
 				await self.writableHandle.write(new Date().toLocaleString() + "," + self.microBit.temperature + "\n");
@@ -482,7 +490,7 @@ var $builtinmodule = function(name)
 			  if (interval > 0)
 			  {
 				  //self.interval = window.setInterval(self.recordTemp, interval);
-				  self.interval = window.setInterval(self.recordAccelerometer, interval);
+				  self.interval = window.setInterval(self.recordTempAccelerometer, interval);
 			  }
 			  self.isRecording = true;
 			}			
@@ -599,6 +607,18 @@ var $builtinmodule = function(name)
             return new Sk.builtin.int_(self.microBit.magnetometer_bearing);
         });
 		
+		$loc.getMagnetometerX = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.magnetometer_raw.x);
+        });
+		
+		$loc.getMagnetometerY = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.magnetometer_raw.y);
+        });
+		
+		$loc.getMagnetometerZ = new Sk.builtin.func((self) => {
+            return new Sk.builtin.int_(self.microBit.magnetometer_raw.z);
+        });
+			
 		$loc.getAccelerometerX = new Sk.builtin.func((self) => {
             return new Sk.builtin.int_(self.microBit.accelerometer.x);
         });

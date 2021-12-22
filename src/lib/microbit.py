@@ -24,12 +24,21 @@ class Microbit:
         return buttonAState, buttonBState
         
     def waitForButtonA(self):
+        # wait for release first
+        while self.uBit.getButtonA() != 0:
+            continue
+        # pressed
         while self.uBit.getButtonA() == 0:
             continue
+        
             
     def waitForButtonB(self):
+        # wait for release first
+        while self.uBit.getButtonB() != 0:
+            continue
         while self.uBit.getButtonB() == 0:
             continue
+        
             
     def waitForButtonPress(self):
         buttonAState = self.uBit.getButtonA()
@@ -46,6 +55,9 @@ class Microbit:
         
     def getBearing(self):
         return self.uBit.getBearing()
+        
+    def getMagnetometer(self):
+        return (self.uBit.getMagnetometerX(), self.uBit.getMagnetometerY(), self.uBit.getMagnetometerZ())
          
     def getAccelerometer(self):
         return (self.uBit.getAccelerometerX(), self.uBit.getAccelerometerY(), self.uBit.getAccelerometerZ())
