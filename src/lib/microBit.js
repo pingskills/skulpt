@@ -575,6 +575,55 @@ var $builtinmodule = function(name)
 
             return;
         });
+		
+		var ledMatrix = [
+		  ['0', '0', '0', '0', '0'],
+		  ['0', '0', '0', '0', '0'],
+		  ['0', '0', '0', '0', '0'],
+		  ['0', '0', '0', '0', '0'],
+		  ['0', '0', '0', '0', '0']
+		]
+
+		//function updatePixel(x,y,value){
+		$loc.updatePixel = new Sk.builtin.func((self, x, y, value) => {
+			if (value) 
+			{
+				ledMatrix[x][y]=1;
+			}
+			else 
+			{
+				ledMatrix[x][y]=0;
+			}
+			self.microBit.writeMatrixIcon(ledMatrix);
+
+			return new Sk.builtin.none;  
+		});
+		
+		$loc.clearLED = new Sk.builtin.func((self) => {
+			ledMatrix = [
+			  ['0', '0', '0', '0', '0'],
+			  ['0', '0', '0', '0', '0'],
+			  ['0', '0', '0', '0', '0'],
+			  ['0', '0', '0', '0', '0'],
+			  ['0', '0', '0', '0', '0']
+			]
+			self.microBit.writeMatrixIcon(ledMatrix);
+		  
+			return new Sk.builtin.none;  
+		});
+		
+		$loc.fillLED = new Sk.builtin.func((self) => {
+			ledMatrix = [
+			  ['1', '1', '1', '1', '1'],
+			  ['1', '1', '1', '1', '1'],
+			  ['1', '1', '1', '1', '1'],
+			  ['1', '1', '1', '1', '1'],
+			  ['1', '1', '1', '1', '1']
+			]
+			self.microBit.writeMatrixIcon(ledMatrix);
+		  
+			return new Sk.builtin.none;  
+		});
     
         $loc.setText = new Sk.builtin.func((self, scrollText) => {
           var text = "" + scrollText;

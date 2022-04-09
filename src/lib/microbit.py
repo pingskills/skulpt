@@ -68,5 +68,14 @@ class Microbit:
             continue
         return
         
+    def setLED(self, x, y, value):
+        self.uBit.updatePixel(x, y, value)
+        
+    def clearLED(self):
+        self.uBit.clearLED()    
+        
+    def fillLED(self):
+        self.uBit.fillLED()  
+        
     def stopRecordData(self):
         return self.uBit.stopRecordData()
