@@ -20,10 +20,10 @@ class StrokeTestCase(unittest.TestCase):
         self.assertEqual(c.green, bgColour)
         self.assertEqual(c.blue, bgColour)
 
-    def test_stroke_defaults(self):
+    def test_stroke_greyscale(self):
         setCanvasSize(100, 100, CARTESIAN)
         background()
-        stroke()
+        stroke(0)
         strokeWeight(5)
         rect(10, 10, 20, 20)
         c = getPixelColour(11, 11)

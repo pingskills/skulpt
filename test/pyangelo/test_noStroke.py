@@ -21,7 +21,7 @@ class NoStrokeTestCase(unittest.TestCase):
         self.assertEqual(c.blue, fillColour)
 
     def test_noStrokeParameterTypes(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             stroke("not an int")
 
 if __name__ == "__main__":
