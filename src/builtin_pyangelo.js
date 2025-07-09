@@ -181,10 +181,20 @@ Sk.builtin.text = function text(text, x, y, fontSize, fontName) {
         Sk.PyAngelo.ctx.save();
         Sk.PyAngelo.ctx.translate(x, y);
         Sk.PyAngelo.ctx.transform(1, 0, 0, -1, 0, height);
-        Sk.PyAngelo.ctx.fillText(text, 0, 0);
+        if (Sk.PyAngelo.doFill) {
+            Sk.PyAngelo.ctx.fillText(text, 0, 0);
+        }
+        if (Sk.PyAngelo.doStroke) {
+            Sk.PyAngelo.ctx.strokeText(text, 0, 0);
+        }
         Sk.PyAngelo.ctx.restore();
     } else {
-        Sk.PyAngelo.ctx.fillText(text, x, y);
+        if (Sk.PyAngelo.doFill) {
+            Sk.PyAngelo.ctx.fillText(text, x, y);
+        }
+        if (Sk.PyAngelo.doStroke) {
+            Sk.PyAngelo.ctx.strokeText(text, x, y);
+        }
     }
     Sk.PyAngelo.ctx.font = fs;
 };
