@@ -5,6 +5,9 @@ Sk.PyAngelo.keyWasPressed = {};
 Sk.PyAngelo.mouseWasPressed = false;
 Sk.PyAngelo.sounds = {};
 Sk.PyAngelo.soundInstances = [];
+Sk.PyAngelo.fontRegistry = {};
+Sk.PyAngelo.currentFont = "Arial";
+Sk.PyAngelo.nextFontId = 0;
 Sk.PyAngelo.fillStates = [];
 Sk.PyAngelo.strokeStates = [];
 
@@ -162,6 +165,75 @@ Sk.builtins["background"] = new Sk.builtin.sk_method(
     "builtins"
 );
 
+Sk.builtin.loadFont = function loadFont(filename) {
+    const relPath = Sk.ffi.remapToJs(filename);
+    const family  = `pyangeloFont${++Sk.PyAngelo.nextFontId}`;
+    const url     = `${relPath}`;
+    // create the FontFace
+    const ff = new FontFace(family, `url(${url}) format('truetype')`);
+    // make it available to <canvas>
+    document.fonts.add(ff);
+
+    // ff.load() returns a Promise that resolves once the font is downloaded
+    const promise = ff.load()
+        .then(() => {
+            // stash it in case you need to inspect later
+            Sk.PyAngelo.fontRegistry[family] = ff;
+            // return a tiny Py-side object carrying the family name:
+            return Sk.ffi.remapToPy({ __fontFamily: family });
+        })
+        .catch(err => {
+            // remove it so it doesn’t linger as a “half-loaded” font
+            document.fonts.delete(ff);
+            // throw a Python exception with a clear message
+            throw new Sk.builtin.RuntimeError(
+                `Could not load font '${relPath}': ${err.message}`
+            );
+        });
+
+    // wrap the Promise in a Skulpt suspension so preload() waits
+    return Sk.misceval.promiseToSuspension(promise);
+};
+
+Sk.builtins["loadFont"] = new Sk.builtin.sk_method(
+    {
+        $meth: Sk.builtin.loadFont,
+        $name: "loadFont",
+        $flags: { OneArg: true },
+        $textsig: "($module, filename /)",
+        $doc:
+            "Loads a font.",
+    },
+    null,
+    "builtins"
+);
+
+Sk.builtin.setFont = function setFont(fontObjOrName) {
+    let fam;
+    fontObjOrName = Sk.ffi.remapToJs(fontObjOrName);
+    if (typeof fontObjOrName === "string") {
+        fam = fontObjOrName;
+    } else {
+        // our loadFont remaps to an object with __fontFamily
+        fam = fontObjOrName.__fontFamily;
+    }
+    Sk.PyAngelo.currentFont = fam;
+    return Sk.builtin.none.none$;
+};
+
+Sk.builtins["setFont"] = new Sk.builtin.sk_method(
+    {
+        $meth: Sk.builtin.setFont,
+        $name: "setFont",
+        $flags: { OneArg: true },
+        $textsig: "($module, filename /)",
+        $doc:
+            "Sets the default font for the text() command.",
+    },
+    null,
+    "builtins"
+);
+
 Sk.builtin.text = function text(text, x, y, fontSize, fontName) {
     Sk.builtin.pyCheckArgsLen("text", arguments.length, 3, 5);
     Sk.builtin.pyCheckType("x", "number", Sk.builtin.checkNumber(x));
@@ -171,9 +243,24 @@ Sk.builtin.text = function text(text, x, y, fontSize, fontName) {
     x = Sk.ffi.remapToJs(x);
     y = Sk.ffi.remapToJs(y);
     fontSize = Sk.ffi.remapToJs(fontSize);
-    fontName = Sk.ffi.remapToJs(fontName);
     let fs = Sk.PyAngelo.ctx.font;
-    Sk.PyAngelo.ctx.font = fontSize.toString() + "px " + fontName;
+    // determine which family to use:
+    // 1) custom-loaded font object
+    // 2) explicit web-safe string ≠ "DEFAULT"
+    // 3) "DEFAULT" → use currentFont
+    const rem = fontName != null && Sk.ffi.remapToJs(fontName);
+    let fam;
+    if (rem && typeof rem === "object") {
+        // custom font loaded via loadFont()
+        fam = rem.__fontFamily;
+    } else if (rem && rem !== "DEFAULT") {
+        // user passed a string like "Arial"
+        fam = rem;
+    } else {
+        // rem is "DEFAULT" or unset → fall back to last setFont()
+        fam = Sk.PyAngelo.currentFont;
+    }
+    Sk.PyAngelo.ctx.font = fontSize.toString() + "px " + fam;
     Sk.PyAngelo.ctx.textBaseline = "top";
     if (Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN) {
         let textMetrics = Sk.PyAngelo.ctx.measureText(text, fontSize, fontName);
@@ -205,7 +292,7 @@ Sk.builtins["text"] = new Sk.builtin.sk_method(
         $name: "text",
         $flags: {
             NamedArgs: [null, null, null, "fontSize", "fontName"],
-            Defaults: [20, "Arial"],
+            Defaults: [20, "DEFAULT"],
         },
         $textsig: "($module, text, x, y, fontSize, fontName /)",
         $doc:
