@@ -221,6 +221,9 @@ class TextSprite(Transformable):
         self._fontSize = fontSize
         self._fontName = fontName
         self.fillColour = Colour(255)
+        self._strokeEnabled = False
+        self.strokeColour = Colour(0)
+        self._strokeWeight = 1
         self._recalculate_metrics()
 
     def _recalculate_metrics(self):
@@ -258,8 +261,23 @@ class TextSprite(Transformable):
             args = args[0]
         self.fillColour = args[0] if isinstance(args[0], Colour) else Colour(*args)
 
+    def setStroke(self, *args):
+        """Set stroke colour"""
+        if len(args) == 1 and isinstance(args[0], (list, tuple)):
+            args = args[0]
+        self.strokeColour = args[0] if isinstance(args[0], Colour) else Colour(*args)
+        self._strokeEnabled = True
+
+    def strokeWeight(self, w): self._strokeWeight = max(0, w)
+    def noStroke(self): self._strokeEnabled = False
+
     def _render(self):
         fill(self.fillColour)
+        if self._strokeEnabled:
+            stroke(self.strokeColour)
+            strokeWeight(self._strokeWeight)
+        else:
+            noStroke()
         text(self._textContent, 0, 0, self._fontSize, self._fontName)
 
     def __repr__(self):

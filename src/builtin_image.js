@@ -1,3 +1,7 @@
+// Helper function
+function inCartesianMode() {
+    return Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN;
+}
 // __init__ implementation
 const initMethod = function (self, file) {
     Sk.builtin.pyCheckArgsLen("__init__", arguments.length, 2, 2);
@@ -159,7 +163,7 @@ const setPivotMethod = function(self, oxPy, oyPy) {
         Sk.builtin.pyCheckType("oy", "number", Sk.builtin.checkNumber(oyPy));
         self._originY = oyVal;
     }
-    if (Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN) {
+    if (inCartesianMode()) {
         self._originY = self._frameH - self._originY;
     }
 
@@ -227,7 +231,7 @@ const drawMethod = function(self, x, y, width, height) {
     ctx.globalAlpha = self.opacity;
     ctx.save();
     prepareContext(ctx, self._smoothing);
-    if (Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN) {
+    if (inCartesianMode()) {
         ctx.translate(x, y);
         ctx.transform(1, 0, 0, -1, 0, height);
         applyTransforms(ctx, self, width, height);
@@ -272,7 +276,7 @@ const drawRegionMethod = function(self, sx, sy, sw, sh, dx, dy, dw, dh) {
     ctx.globalAlpha = self.opacity;
     ctx.save();
     prepareContext(ctx, self._smoothing);
-    if (Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN) {
+    if (inCartesianMode()) {
         ctx.translate(dx, dy);
         ctx.transform(1, 0, 0, -1, 0, dh);
         applyTransforms(ctx, self, dw, dh);

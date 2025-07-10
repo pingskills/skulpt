@@ -15,6 +15,10 @@ function convertYToCartesian(y) {
     return Sk.PyAngelo.canvas.height - y - 1;
 }
 
+function inCartesianMode() {
+    return Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN;
+}
+
 Sk.builtin.setCanvasSize = function setCanvasSize(w, h, yAxisMode) {
     Sk.builtin.pyCheckArgsLen("setCanvasSize", arguments.length, 2, 3);
     Sk.builtin.pyCheckType("w", "integer", Sk.builtin.checkInt(w));
@@ -33,9 +37,9 @@ Sk.builtin.setCanvasSize = function setCanvasSize(w, h, yAxisMode) {
 
     // Set up the y axis
     yAxisMode = Sk.ffi.remapToJs(yAxisMode);
-    if (yAxisMode === Sk.PyAngelo.CARTESIAN) {
+    Sk.PyAngelo.yAxisMode = yAxisMode;
+    if (inCartesianMode()) {
         Sk.PyAngelo.ctx.transform(1, 0, 0, -1, 0, h);
-        Sk.PyAngelo.yAxisMode = yAxisMode;
     } else {
         Sk.PyAngelo.ctx.transform(1, 0, 0, 1, 0, 0);
         Sk.PyAngelo.yAxisMode = Sk.PyAngelo.JAVASCRIPT;
@@ -234,6 +238,37 @@ Sk.builtins["setFont"] = new Sk.builtin.sk_method(
     "builtins"
 );
 
+Sk.builtin.textAlign = function textAlign(horizontal, vertical) {
+    Sk.builtin.pyCheckArgsLen("textAlign", arguments.length, 2, 2);
+    Sk.builtin.pyCheckType("horizontal", "integer", Sk.builtin.checkInt(horizontal));
+    Sk.builtin.pyCheckType("vertical", "integer", Sk.builtin.checkInt(vertical));
+    let h = Sk.ffi.remapToJs(horizontal);
+    if (h === Sk.PyAngelo.LEFT || h === Sk.PyAngelo.RIGHT || h === Sk.PyAngelo.CENTER) {
+        Sk.PyAngelo.textAlign = h;
+    }
+    let v = Sk.ffi.remapToJs(vertical);
+    if (v === Sk.PyAngelo.TOP || v === Sk.PyAngelo.BOTTOM || v === Sk.PyAngelo.BASELINE || v === Sk.PyAngelo.CENTER) {
+        Sk.PyAngelo.textBaseline = v;
+    }
+
+};
+
+Sk.builtins["textAlign"] = new Sk.builtin.sk_method(
+    {
+        $meth: Sk.builtin.textAlign,
+        $name: "textAlign",
+        $flags: {
+            NamedArgs: ["horizontal", "vertical"],
+            Defaults: [1, 5],
+        },
+        $textsig: "($module, horizontal, vertical /)",
+        $doc:
+            "Sets the alignment used when calling text() both horizontally and vertically.",
+    },
+    null,
+    "builtins"
+);
+
 Sk.builtin.text = function text(text, x, y, fontSize, fontName) {
     Sk.builtin.pyCheckArgsLen("text", arguments.length, 3, 5);
     Sk.builtin.pyCheckType("x", "number", Sk.builtin.checkNumber(x));
@@ -261,13 +296,19 @@ Sk.builtin.text = function text(text, x, y, fontSize, fontName) {
         fam = Sk.PyAngelo.currentFont;
     }
     Sk.PyAngelo.ctx.font = fontSize.toString() + "px " + fam;
-    Sk.PyAngelo.ctx.textBaseline = "top";
-    if (Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN) {
-        let textMetrics = Sk.PyAngelo.ctx.measureText(text, fontSize, fontName);
-        const height = Math.abs(textMetrics.actualBoundingBoxAscent) + Math.abs(textMetrics.actualBoundingBoxDescent);
+    const halign = { 1: "left", 2: "right", 3: "center" }[Sk.PyAngelo.textAlign] || "left";
+    Sk.PyAngelo.ctx.textAlign = halign;
+    let valign = {
+        3: "middle",
+        4: "top",
+        5: "bottom",
+        6: "alphabetic"
+    }[Sk.PyAngelo.textBaseline] || "top";
+    Sk.PyAngelo.ctx.textBaseline = valign;
+    if (inCartesianMode()) {
         Sk.PyAngelo.ctx.save();
         Sk.PyAngelo.ctx.translate(x, y);
-        Sk.PyAngelo.ctx.transform(1, 0, 0, -1, 0, height);
+        Sk.PyAngelo.ctx.scale(1, -1);
         if (Sk.PyAngelo.doFill) {
             Sk.PyAngelo.ctx.fillText(text, 0, 0);
         }
@@ -1024,7 +1065,7 @@ Sk.builtin.drawImage = function drawImage(image, x, y, width, height, opacity) {
         }
         Sk.PyAngelo.ctx.globalAlpha = opacity;
     }
-    if (Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN) {
+    if (inCartesianMode()) {
         Sk.PyAngelo.ctx.save();
         Sk.PyAngelo.ctx.translate(x, y);
         Sk.PyAngelo.ctx.transform(1, 0, 0, -1, 0, height);
@@ -1231,7 +1272,7 @@ Sk.builtin.getPixelColour = function getPixelColour(x, y) {
     Sk.builtin.pyCheckType("y", "number", Sk.builtin.checkNumber(y));
     x = Sk.ffi.remapToJs(x);
     y = Sk.ffi.remapToJs(y);
-    if (Sk.PyAngelo.yAxisMode == Sk.PyAngelo.CARTESIAN) {
+    if (inCartesianMode()) {
         y = convertYToCartesian(y);
     }
     const pixel = Sk.PyAngelo.ctx.getImageData(x, y, 1, 1);
@@ -1763,26 +1804,42 @@ Sk.PyAngelo.reset = function() {
 
     // Used to set y axis mode
     Sk.builtins.CARTESIAN = new Sk.builtin.int_(1);
-    Sk.PyAngelo.CARTESIAN = Sk.ffi.remapToJs(Sk.builtins.CARTESIAN);
+    Sk.PyAngelo.CARTESIAN = 1;
     Sk.builtins.JAVASCRIPT = new Sk.builtin.int_(2);
-    Sk.PyAngelo.JAVASCRIPT = Sk.ffi.remapToJs(Sk.builtins.JAVASCRIPT);
+    Sk.PyAngelo.JAVASCRIPT = 2;
     // Used to set angle mode
     Sk.builtins.RADIANS = new Sk.builtin.int_(1);
-    Sk.PyAngelo.RADIANS = Sk.ffi.remapToJs(Sk.builtins.RADIANS);
+    Sk.PyAngelo.RADIANS = 1;
     Sk.builtins.DEGREES = new Sk.builtin.int_(2);
-    Sk.PyAngelo.DEGREES = Sk.ffi.remapToJs(Sk.builtins.DEGREES);
+    Sk.PyAngelo.DEGREES = 2;
     // Used for rect mode and circle mode
     Sk.builtins.CORNER = new Sk.builtin.int_(1);
-    Sk.PyAngelo.CORNER = Sk.ffi.remapToJs(Sk.builtins.CORNER);
+    Sk.PyAngelo.CORNER = 1;
     Sk.builtins.CORNERS = new Sk.builtin.int_(2);
-    Sk.PyAngelo.CORNERS = Sk.ffi.remapToJs(Sk.builtins.CORNERS);
+    Sk.PyAngelo.CORNERS = 2;
     Sk.builtins.CENTER = new Sk.builtin.int_(3);
-    Sk.PyAngelo.CENTER = Sk.ffi.remapToJs(Sk.builtins.CENTER);
+    Sk.PyAngelo.CENTER = 3;
+    // Used for textAlign
+    // horizontal
+    Sk.builtins.LEFT   = new Sk.builtin.int_(1);
+    Sk.PyAngelo.LEFT   = 1;
+    Sk.builtins.RIGHT  = new Sk.builtin.int_(2);
+    Sk.PyAngelo.RIGHT  = 2;
+    // Used for both horizontal and vertical alignment
+    // Sk.builtins.CENTER is already 3
+    // Sk.PyAngelo.CENTER is already 3
+    // vertical
+    Sk.builtins.TOP       = new Sk.builtin.int_(4);
+    Sk.PyAngelo.TOP       = 4;
+    Sk.builtins.BOTTOM    = new Sk.builtin.int_(5);
+    Sk.PyAngelo.BOTTOM    = 5;
+    Sk.builtins.BASELINE  = new Sk.builtin.int_(6);
+    Sk.PyAngelo.BASELINE  = 6;
     // Used for end shape
     Sk.builtins.CLOSE = new Sk.builtin.int_(1);
-    Sk.PyAngelo.CLOSE = Sk.ffi.remapToJs(Sk.builtins.CLOSE);
+    Sk.PyAngelo.CLOSE = 1;
     Sk.builtins.OPEN = new Sk.builtin.int_(2);
-    Sk.PyAngelo.OPEN = Sk.ffi.remapToJs(Sk.builtins.OPEN);
+    Sk.PyAngelo.OPEN = 2;
     // Used for console height
     Sk.builtins.SMALL_SCREEN = new Sk.builtin.int_(300);
     Sk.builtins.MEDIUM_SCREEN = new Sk.builtin.int_(500);
@@ -1804,6 +1861,8 @@ Sk.PyAngelo.reset = function() {
     Sk.PyAngelo.doStroke = true;
     Sk.PyAngelo.rectMode = Sk.PyAngelo.CORNER;
     Sk.PyAngelo.circleMode = Sk.PyAngelo.CENTER;
+    Sk.PyAngelo.textAlign = Sk.PyAngelo.LEFT;
+    Sk.PyAngelo.textBaseline = Sk.PyAngelo.BOTTOM;
     Sk.builtins.width = new Sk.builtin.int_(0);
     Sk.builtins.height = new Sk.builtin.int_(0);
     Sk.builtins.mouseX = new Sk.builtin.int_(0);
@@ -1833,7 +1892,7 @@ Sk.PyAngelo.preparePage = function() {
         const boundingRect = Sk.PyAngelo.canvas.getBoundingClientRect();
         Sk.builtins.mouseX = Sk.ffi.remapToPy(Math.round(ev.clientX - boundingRect.left));
         let y = Math.round(ev.clientY - boundingRect.top);
-        if (Sk.PyAngelo.yAxisMode == Sk.PyAngelo.CARTESIAN) {
+        if (inCartesianMode()) {
             y = convertYToCartesian(y);
         }
         Sk.builtins.mouseY = Sk.ffi.remapToPy(y) ;

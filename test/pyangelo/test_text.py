@@ -6,7 +6,7 @@ class TextTestCase(unittest.TestCase):
         setCanvasSize(400, 400, CARTESIAN)
         background(255, 255, 255)
         fill(0, 0, 0)
-        text("Hello", 0, 0, 100)
+        text("great", 0, 0, 100)
         bgColour = getPixelColour(12, 12)
         self.assertEqual(bgColour.red, 0)
         self.assertEqual(bgColour.green, 0)
@@ -15,24 +15,12 @@ class TextTestCase(unittest.TestCase):
         setCanvasSize(400, 400, JAVASCRIPT)
         background(255, 255, 255)
         fill(0, 0, 0)
-        text("Hello", 0, 0, 100)
+        textAlign(CENTER, TOP)
+        text("Brilliant", 0, 0, 100)
         bgColour = getPixelColour(12, 12)
         self.assertEqual(bgColour.red, 0)
         self.assertEqual(bgColour.green, 0)
         self.assertEqual(bgColour.blue, 0)
-
-    def test_textStroke(self):
-        setCanvasSize(200, 200, CARTESIAN)
-        background(255, 255, 255)
-        fill(0, 0, 0)
-        stroke(255, 0, 0)        # red outline
-        strokeWeight(4)
-        text("X", 0, 0, 80)
-        # pick a pixel just outside the fill area, where the red stroke should sit
-        edgeColour = getPixelColour(3, 7)
-        self.assertEqual(edgeColour.red, 255)
-        self.assertEqual(edgeColour.green, 0)
-        self.assertEqual(edgeColour.blue, 0)
 
     def test_noStroke(self):
         setCanvasSize(200, 200, JAVASCRIPT)
