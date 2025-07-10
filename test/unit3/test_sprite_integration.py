@@ -1,6 +1,5 @@
 import unittest
-
-from sprite import RectangleSprite, CircleSprite, EllipseSprite
+from sprite import RectangleSprite, CircleSprite, EllipseSprite, PolygonSprite
 
 class IntegrationSmokeTests(unittest.TestCase):
     def test_rectangle_tween_collision(self):
@@ -53,6 +52,26 @@ class IntegrationSmokeTests(unittest.TestCase):
         self.assertEqual(calls, ['done'])
         # Tween list should be empty
         self.assertEqual(len(rect._tweens), 0)
+
+    def test_default_drawMode(self):
+        r = RectangleSprite(0,0,10,20)
+        self.assertEqual(r.drawMode, CORNER)
+
+        c = CircleSprite(0,0,5)
+        self.assertEqual(c.drawMode, CENTER)
+
+        e = EllipseSprite(0,0,5,3)
+        self.assertEqual(e.drawMode, CENTER)
+
+        p = PolygonSprite(0,0,6,4)
+        self.assertEqual(p.drawMode, CENTER)
+
+    def test_setDrawMode_valid_and_invalid(self):
+        r = RectangleSprite(0,0,4,4)
+        r.setDrawMode(CENTER)
+        self.assertEqual(r.drawMode, CENTER)
+        with self.assertRaises(ValueError):
+            r.setDrawMode("notamode")
 
 if __name__ == '__main__':
     unittest.main()

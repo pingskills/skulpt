@@ -10,30 +10,30 @@ def aabbCollision(a, b):
             and a.top >= b.bottom and a.bottom <= b.top)
 
 def circleCircleCollision(c1, c2):
-    dx = c1.x - c2.x; dy = c1.y - c2.y
+    dx = c1.centerX - c2.centerX; dy = c1.centerY - c2.centerY
     return dx*dx + dy*dy <= (c1.radius + c2.radius)**2
 
 def circleRectCollision(circle, rect):
-    cx = clamp(circle.x, rect.left, rect.right)
-    cy = clamp(circle.y, rect.bottom, rect.top)
-    dx = circle.x - cx; dy = circle.y - cy
+    cx = clamp(circle.centerX, rect.left, rect.right)
+    cy = clamp(circle.centerY, rect.bottom, rect.top)
+    dx = circle.centerX - cx; dy = circle.centerY - cy
     return dx*dx + dy*dy <= circle.radius**2
 
 # --- Ellipse collision handlers ---
 
 def ellipseEllipseCollision(e1, e2):
-    dx = e1.x - e2.x; dy = e1.y - e2.y
+    dx = e1.centerX - e2.centerX; dy = e1.centerY - e2.centerY
     rx = e1.radiusX + e2.radiusX; ry = e1.radiusY + e2.radiusY
     return (dx*dx)/(rx*rx) + (dy*dy)/(ry*ry) <= 1
 
 def ellipseRectCollision(ellipse, rect):
-    cx = clamp(ellipse.x, rect.left, rect.right)
-    cy = clamp(ellipse.y, rect.bottom, rect.top)
-    dx = ellipse.x - cx; dy = ellipse.y - cy
+    cx = clamp(ellipse.centerX, rect.left, rect.right)
+    cy = clamp(ellipse.centerY, rect.bottom, rect.top)
+    dx = ellipse.centerX - cx; dy = ellipse.centerY - cy
     return (dx*dx)/(ellipse.radiusX**2) + (dy*dy)/(ellipse.radiusY**2) <= 1
 
 def circleEllipseCollision(circle, ellipse):
-    dx = circle.x - ellipse.x; dy = circle.y - ellipse.y
+    dx = circle.centerX - ellipse.centerX; dy = circle.centerY - ellipse.centerY
     rx = ellipse.radiusX + circle.radius; ry = ellipse.radiusY + circle.radius
     return (dx*dx)/(rx*rx) + (dy*dy)/(ry*ry) <= 1
 
@@ -63,7 +63,7 @@ def polygonRectCollision(poly, rect):
 def polygonCircleCollision(poly, circle):
     axes = poly.getAxes()
     verts = poly.getVertices()
-    cx, cy = circle.x, circle.y
+    cx, cy = circle.centerX, circle.centerY
     closest = min(verts, key=lambda v: (v[0]-cx)**2 + (v[1]-cy)**2)
     dx = closest[0] - cx; dy = closest[1] - cy
     length = math.hypot(dx, dy)
@@ -92,7 +92,7 @@ def polygonEllipseCollision(poly, ellipse):
         # polygon projection
         min1, max1 = poly.project((ax, ay))
         # ellipse projection: centre ± radius along this axis
-        center_proj = ellipse.x*ax + ellipse.y*ay
+        center_proj = ellipse.centerX*ax + ellipse.centerY*ay
         # effective radius on this axis = rx*|ax| + ry*|ay|
         r = ellipse.radiusX*abs(ax) + ellipse.radiusY*abs(ay)
         min2, max2 = center_proj - r, center_proj + r
@@ -122,5 +122,7 @@ COLLISION_HANDLERS = {
     ('EllipseSprite','PolygonSprite'): lambda e, p: polygonEllipseCollision(p, e),
     ('CircleSprite','Sprite'): circleRectCollision,
     ('Sprite','CircleSprite'): lambda s, c: circleRectCollision(c, s),
+    ('EllipseSprite','Sprite'): ellipseRectCollision,
+    ('Sprite','EllipseSprite'): lambda s, e: ellipseRectCollision(e, s),
 }
 

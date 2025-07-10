@@ -21,7 +21,9 @@ class Transformable:
         self._anchorX = clamp(anchorX, 0, 1)
         self._anchorY = clamp(anchorY, 0, 1)
         self._tweens = []
-        self._hitTest = None; self._overlapTest = None
+        self._hitTest = None
+        self._overlapTest = None
+        self._drawMode = CORNER
 
     # Tween API
     def tweenTo(self, propertyName, endValue, duration, easing=None):
@@ -84,15 +86,43 @@ class Transformable:
     def rotateTo(self, angle): self.angle = angle
     def rotateBy(self, d): self.angle += d
 
+    # Draw Mode
+    @property
+    def drawMode(self):
+        return self._drawMode
+
+    def setDrawMode(self, mode):
+        if mode not in (CORNER, CENTER):
+            raise ValueError(f"Invalid drawMode: {mode}")
+        self._drawMode = mode
+
     # Boundaries
     @property
-    def left(self): return self.x
+    def left(self):
+        if self._drawMode == CENTER:
+            return self.x - self.width/2
+        return self.x
     @property
-    def right(self): return self.x + self.width
+    def right(self):
+        return self.left + self.width
     @property
-    def bottom(self): return self.y
+    def bottom(self):
+        if self._drawMode == CENTER:
+            return self.y - self.height/2
+        return self.y
     @property
-    def top(self): return self.y + self.height
+    def top(self): return self.bottom + self.height
+
+    @property
+    def centerX(self):
+        if self._drawMode == CENTER:
+            return self.x
+        return self.x + self.width/2
+    @property
+    def centerY(self):
+        if self._drawMode == CENTER:
+            return self.y
+        return self.y + self.height/2
 
     # Drawing (render only)
     def draw(self):
@@ -100,9 +130,12 @@ class Transformable:
         if self.angle != 0.0:
             px = getattr(self, 'width', 0) * self.anchorX
             py = getattr(self, 'height',0) * self.anchorY
-            translate(self.x + px, self.y + py)
+            translate(self.left + px, self.bottom + py)
             rotate(self.angle)
-            translate(-px, -py)
+            if self._drawMode == CORNER:
+                translate(-px, -py)
+            else:
+                translate(-self.left - px + self.x, -self.bottom - py + self.y)
         else:
             translate(self.x, self.y)
         self._render()
@@ -156,28 +189,36 @@ class Sprite(Transformable):
 
     @property
     def left(self):
+        if self._drawMode == CENTER:
+            leftEdge = self.x - self.width/2
+        else:
+            leftEdge = self.x
         full_w = self.width
         shrunk_w = full_w * self.hitboxScale
         # shift inwards by half the lost width to keep centered
-        return self.x + (full_w - shrunk_w) / 2
+        return leftEdge + (full_w - shrunk_w) / 2
 
     @property
     def right(self):
         full_w = self.width
         shrunk_w = full_w * self.hitboxScale
-        return self.x + (full_w - shrunk_w) / 2 + shrunk_w
+        return self.left + shrunk_w
 
     @property
     def bottom(self):
+        if self._drawMode == CENTER:
+            bottomEdge = self.y - self.height/2
+        else:
+            bottomEdge = self.y
         full_h = self.height
         shrunk_h = full_h * self.hitboxScale
-        return self.y + (full_h - shrunk_h) / 2
+        return bottomEdge + (full_h - shrunk_h) / 2
 
     @property
     def top(self):
         full_h = self.height
         shrunk_h = full_h * self.hitboxScale
-        return self.y + (full_h - shrunk_h) / 2 + shrunk_h
+        return self.bottom + shrunk_h
 
     @property
     def width(self):
@@ -205,6 +246,8 @@ class Sprite(Transformable):
         self.hitboxScale = clamp(scale, 0.0, 1.0)
 
     def _render(self):
+        if self._drawMode == CENTER:
+            translate(-self.width/2, -self.height/2)
         drawImage(self._image, 0, 0, self.width, self.height, opacity=self.opacity)
 
     def __repr__(self):
@@ -272,6 +315,10 @@ class TextSprite(Transformable):
     def noStroke(self): self._strokeEnabled = False
 
     def _render(self):
+        if self._drawMode == CENTER:
+            textAlign(CENTER, CENTER)
+        else:
+            textAlign(LEFT, BOTTOM)
         fill(self.fillColour)
         if self._strokeEnabled:
             stroke(self.strokeColour)
@@ -329,37 +376,81 @@ class RectangleSprite(ShapeSprite):
     def __init__(self, x=0, y=0, width=0, height=0):
         super().__init__(x, y)
         self.width, self.height = width, height
-    def _renderShape(self): rect(0, 0, self.width, self.height)
+    def _renderShape(self):
+        rectMode(self._drawMode)
+        rect(0, 0, self.width, self.height)
     def __repr__(self): return f"RectangleSprite(x={self.x},y={self.y},w={self.width},h={self.height})"
 
 class CircleSprite(ShapeSprite):
     def __init__(self, x=0, y=0, radius=0):
         super().__init__(x, y)
         self.radius = radius
+        self._drawMode = CENTER
     @property
-    def left(self): return self.x - self.radius
+    def left(self):
+        if self._drawMode == CENTER:
+            return self.x - self.radius
+        return self.x
     @property
-    def right(self): return self.x + self.radius
+    def right(self):
+        if self._drawMode == CENTER:
+            return self.x + self.radius
+        return self.x + self.radius*2
     @property
-    def bottom(self): return self.y - self.radius
+    def bottom(self):
+        if self._drawMode == CENTER:
+            return self.y - self.radius
+        return self.y
     @property
-    def top(self): return self.y + self.radius
-    def _renderShape(self): circle(0, 0, self.radius)
+    def top(self):
+        if self._drawMode == CENTER:
+            return self.y + self.radius
+        return self.y + self.radius*2
+    @property
+    def width(self):
+        return self.radius*2
+    @property
+    def height(self):
+        return self.radius*2
+    def _renderShape(self):
+        circleMode(self._drawMode)
+        circle(0, 0, self.radius)
     def __repr__(self): return f"CircleSprite(x={self.x},y={self.y},r={self.radius})"
 
 class EllipseSprite(ShapeSprite):
     def __init__(self, x=0, y=0, radiusX=0, radiusY=0):
         super().__init__(x, y)
         self.radiusX, self.radiusY = radiusX, radiusY
+        self._drawMode = CENTER
     @property
-    def left(self): return self.x - self.radiusX
+    def left(self):
+        if self._drawMode == CENTER:
+            return self.x - self.radiusX
+        return self.x
     @property
-    def right(self): return self.x + self.radiusX
+    def right(self):
+        if self._drawMode == CENTER:
+            return self.x + self.radiusX
+        return self.x + self.radiusX*2
     @property
-    def bottom(self): return self.y - self.radiusY
+    def bottom(self):
+        if self._drawMode == CENTER:
+            return self.y - self.radiusY
+        return self.y
     @property
-    def top(self): return self.y + self.radiusY
-    def _renderShape(self): ellipse(0, 0, self.radiusX, self.radiusY)
+    def top(self):
+        if self._drawMode == CENTER:
+            return self.y + self.radiusY
+        return self.y + self.radiusY*2
+    @property
+    def width(self):
+        return self.radiusX*2
+    @property
+    def height(self):
+        return self.radiusY*2
+    def _renderShape(self):
+        circleMode(self._drawMode)
+        ellipse(0, 0, self.radiusX, self.radiusY)
     def __repr__(self): return f"EllipseSprite(x={self.x},y={self.y},rx={self.radiusX},ry={self.radiusY})"
 
 class PolygonSprite(ShapeSprite):
@@ -368,7 +459,36 @@ class PolygonSprite(ShapeSprite):
         super().__init__(x, y)
         self.numSides = max(3, int(numSides))
         self.radius = max(0, radius)
+        self._drawMode = CENTER
+    @property
+    def left(self):
+        if self._drawMode == CENTER:
+            return self.x - self.radius
+        return self.x
+    @property
+    def right(self):
+        if self._drawMode == CENTER:
+            return self.x + self.radius
+        return self.x + self.radius*2
+    @property
+    def bottom(self):
+        if self._drawMode == CENTER:
+            return self.y - self.radius
+        return self.y
+    @property
+    def top(self):
+        if self._drawMode == CENTER:
+            return self.y + self.radius
+        return self.y + self.radius*2
+    @property
+    def width(self):
+        return self.radius*2
+    @property
+    def height(self):
+        return self.radius*2
     def _renderShape(self):
+        if self._drawMode == CORNER:
+            translate(self.radius, self.radius)
         beginShape()
         for i in range(self.numSides):
             ang = 2*math.pi*i/self.numSides

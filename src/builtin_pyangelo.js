@@ -10,6 +10,10 @@ Sk.PyAngelo.currentFont = "Arial";
 Sk.PyAngelo.nextFontId = 0;
 Sk.PyAngelo.fillStates = [];
 Sk.PyAngelo.strokeStates = [];
+Sk.PyAngelo.rectModeStates = [];
+Sk.PyAngelo.circleModeStates = [];
+Sk.PyAngelo.textAlignStates = [];
+Sk.PyAngelo.textBaselineStates = [];
 
 function convertYToCartesian(y) {
     return Sk.PyAngelo.canvas.height - y - 1;
@@ -347,6 +351,10 @@ Sk.builtin.saveState = function saveState() {
     Sk.PyAngelo.ctx.save();
     Sk.PyAngelo.fillStates.push(Sk.PyAngelo.doFill);
     Sk.PyAngelo.strokeStates.push(Sk.PyAngelo.doStroke);
+    Sk.PyAngelo.rectModeStates.push(Sk.PyAngelo.rectMode);
+    Sk.PyAngelo.circleModeStates.push(Sk.PyAngelo.circleMode);
+    Sk.PyAngelo.textAlignStates.push(Sk.PyAngelo.textAlign);
+    Sk.PyAngelo.textBaselineStates.push(Sk.PyAngelo.textBaseline);
 };
 
 Sk.builtins["saveState"] = new Sk.builtin.sk_method(
@@ -366,6 +374,10 @@ Sk.builtin.restoreState = function restoreState() {
     Sk.PyAngelo.ctx.restore();
     if (Sk.PyAngelo.fillStates.length > 0)  { Sk.PyAngelo.doFill = Sk.PyAngelo.fillStates.pop(); }
     if (Sk.PyAngelo.strokeStates.length > 0) { Sk.PyAngelo.doStroke = Sk.PyAngelo.strokeStates.pop(); }
+    if (Sk.PyAngelo.rectModeStates.length > 0) { Sk.PyAngelo.rectMode = Sk.PyAngelo.rectModeStates.pop(); }
+    if (Sk.PyAngelo.circleModeStates.length > 0) { Sk.PyAngelo.circleMode = Sk.PyAngelo.circleModeStates.pop(); }
+    if (Sk.PyAngelo.textAlignStates.length > 0) { Sk.PyAngelo.textAlign = Sk.PyAngelo.textAlignStates.pop(); }
+    if (Sk.PyAngelo.textBaselineStates.length > 0) { Sk.PyAngelo.textBaseline = Sk.PyAngelo.textBaselineStates.pop(); }
 };
 
 Sk.builtins["restoreState"] = new Sk.builtin.sk_method(
@@ -1945,3 +1957,6 @@ Sk.PyAngelo.preparePage = function() {
 
     Sk.PyAngelo.reset();
 };
+
+// ensure our built-in constants exist right away, even for headless tests
+Sk.PyAngelo.reset();

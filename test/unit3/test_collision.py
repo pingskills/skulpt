@@ -140,6 +140,24 @@ class SpriteCollisionTests(unittest.TestCase):
         circle_far = CircleSprite(5,5,1)
         self.assertEqual(polygon.overlaps(circle_far), polygonCircleCollision(polygon, circle_far))
 
+    def test_collision_differs_by_drawMode(self):
+        # two rectangles that just touch in one mode but not in the other
+        r1 = RectangleSprite(100, 100, width=4, height=4)
+        r2 = RectangleSprite(103, 103, width=4, height=4)
+        # CORNER: they touch edges → collision
+        r1.setDrawMode(CORNER)
+        r2.setDrawMode(CORNER)
+        self.assertTrue(r1.overlaps(r2))
+        r1.setDrawMode(CENTER)
+        r2.setDrawMode(CORNER)
+        self.assertFalse(r1.overlaps(r2))
+        r1.setDrawMode(CENTER)
+        r2.setDrawMode(CENTER)
+        self.assertTrue(r1.overlaps(r2))
+        r1.setDrawMode(CORNER)
+        r2.setDrawMode(CENTER)
+        self.assertTrue(r1.overlaps(r2))
+
 class EdgeCaseCollisionTests(unittest.TestCase):
     def test_touching_edges_count_as_collision(self):
         c1 = CircleSprite(0,0,1)
@@ -163,6 +181,72 @@ class EdgeCaseCollisionTests(unittest.TestCase):
         self.assertTrue(circleCircleCollision(circle_zero, circle))
         circle_far = CircleSprite(5,5,1)
         self.assertFalse(circleCircleCollision(circle_zero, circle_far))
+
+class MixedDrawModeCollisionTests(unittest.TestCase):
+    def test_circle_rect_collision_center_vs_corner(self):
+        # Circle at (5,5), r=2 → spans [3→7]
+        # Rectangle at (7,3), w=4,h=4 in CORNER → spans [7→11]×[3→7]
+        c = CircleSprite(5, 5, radius=2)
+        r = RectangleSprite(7, 3, width=4, height=4)
+        c.setDrawMode(CENTER)
+        r.setDrawMode(CORNER)
+        # They touch along the vertical edge at x=7 → should count as collision
+        self.assertTrue(circleRectCollision(c, r))
+        self.assertTrue(c.overlaps(r))
+
+    def test_ellipse_polygon_collision_corner_vs_center(self):
+        # Ellipse center (10,10) → radiusX=3,radiusY=1 corners [10→16]×[10→12] if CORNER
+        e = EllipseSprite(10, 10, radiusX=3, radiusY=1)
+        p = PolygonSprite(15, 11, numSides=6, radius=2)
+        e.setDrawMode(CORNER)
+        p.setDrawMode(CENTER)
+        # Their boxes overlap: [10,16]×[10,12] vs [13→17]×[9→13]
+        self.assertTrue(polygonEllipseCollision(p, e))
+        self.assertTrue(p.overlaps(e))
+
+    def test_circle_ellipse_no_collision_mixed_modes(self):
+        c = CircleSprite(0, 0, radius=1)
+        e = EllipseSprite(3, 3, radiusX=1, radiusY=2)
+        c.setDrawMode(CENTER)
+        e.setDrawMode(CORNER)
+        # Circle spans [-1→1], ellipse spans [3→5]×[3→5] → no overlap
+        self.assertFalse(circleEllipseCollision(c, e))
+        self.assertFalse(e.overlaps(c))
+
+
+class ContainsPointTests(unittest.TestCase):
+    def test_rectangle_contains_corner_and_center(self):
+        r = RectangleSprite(0, 0, width=4, height=6)
+        # CORNER: spans [0→4]×[0→6]
+        r.setDrawMode(CORNER)
+        self.assertTrue(r.contains(Point(2, 3)))
+        self.assertFalse(r.contains(Point(5, 3)))
+        # CENTER: center at (0,0) spans [-2→2]×[-3→3]
+        r.setDrawMode(CENTER)
+        self.assertTrue(r.contains(Point(1, -2)))
+        self.assertFalse(r.contains(Point(3, 0)))
+
+    def test_circle_contains_corner_and_center(self):
+        c = CircleSprite(5, 5, radius=3)
+        # CENTER (default): contains (5,5) and (8,5), excludes (9,5)
+        self.assertTrue(c.contains(Point(5, 5)))
+        self.assertTrue(c.contains(Point(8, 5)))
+        self.assertFalse(c.contains(Point(9, 5)))
+        # now treat x/y as corner: spans [5→11]×[5→11]
+        c.setDrawMode(CORNER)
+        self.assertTrue(c.contains(Point(6, 6)))
+        self.assertFalse(c.contains(Point(4, 4)))
+
+
+class TouchingEdgeBehaviorTests(unittest.TestCase):
+    def test_edge_touching_rectangle_polygon(self):
+        # Two polygons that just touch at one vertex
+        p1 = PolygonSprite(200, 200, numSides=4, radius=20)
+        p2 = PolygonSprite(240, 200, numSides=4, radius=20)
+        p1.setDrawMode(CENTER)   # spans [-2→2], p2 spans [2→6]
+        p2.setDrawMode(CENTER)
+        # They share the line x=240 → should be True if you treat boundaries as collisions
+        self.assertTrue(polygonPolygonCollision(p1, p2))
 
 if __name__ == '__main__':
     unittest.main()

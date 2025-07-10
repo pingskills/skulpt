@@ -188,5 +188,88 @@ class TextSpriteTests(unittest.TestCase):
         t.fontName = "Other"
         self.assertEqual((t.width, t.height), (4,6))
 
+class RectangleDrawModeTests(unittest.TestCase):
+    def test_rectangle_bounds_corner(self):
+        r = RectangleSprite(10, 20, width=4, height=6)
+        r.setDrawMode(CORNER)
+        # x→left, y→bottom
+        self.assertEqual((r.left, r.right, r.bottom, r.top), (10,14,20,26))
+
+    def test_rectangle_bounds_center(self):
+        r = RectangleSprite(10, 20, width=4, height=6)
+        r.setDrawMode(CENTER)
+        # centre (10,20) with half-sizes 2,3
+        self.assertEqual((r.left, r.right, r.bottom, r.top), (8,12,17,23))
+
+    def test_center_coordinates(self):
+        r = RectangleSprite(3, 7, width=4, height=6)
+        r.setDrawMode(CORNER)
+        self.assertEqual((r.centerX, r.centerY), (3+2, 7+3))
+
+        r.setDrawMode(CENTER)
+        self.assertEqual((r.centerX, r.centerY), (3, 7))
+
+class CircleDrawModeTests(unittest.TestCase):
+    def test_circle_bounds_center(self):
+        c = CircleSprite(5, 5, radius=3)
+        # default is CENTER → left=2,right=8,bottom=2,top=8
+        self.assertEqual((c.left, c.right, c.bottom, c.top), (2,8,2,8))
+
+    def test_circle_bounds_corner(self):
+        c = CircleSprite(5, 5, radius=3)
+        c.setDrawMode(CORNER)
+        # now x,y is lower-left of 6×6 box
+        self.assertEqual((c.left, c.right, c.bottom, c.top), (5,11,5,11))
+
+    def test_center_coordinates(self):
+        r = CircleSprite(10, 20, radius=4)
+        r.setDrawMode(CORNER)
+        self.assertEqual((r.centerX, r.centerY), (10+4, 20+4))
+
+        r.setDrawMode(CENTER)
+        self.assertEqual((r.centerX, r.centerY), (10, 20))
+
+
+class EllipseDrawModeTests(unittest.TestCase):
+    def test_ellipse_bounds_center(self):
+        e = EllipseSprite(0, 0, radiusX=2, radiusY=1)
+        # default CENTER
+        self.assertEqual((e.left,e.right,e.bottom,e.top),(-2,2,-1,1))
+
+    def test_ellipse_bounds_corner(self):
+        e = EllipseSprite(0, 0, radiusX=2, radiusY=1)
+        e.setDrawMode(CORNER)
+        # box from (0,0) → (4,2)
+        self.assertEqual((e.left,e.right,e.bottom,e.top),(0,4,0,2))
+
+    def test_center_coordinates(self):
+        r = EllipseSprite(10, 20, radiusX=4, radiusY=6)
+        r.setDrawMode(CORNER)
+        self.assertEqual((r.centerX, r.centerY), (10+4, 20+6))
+
+        r.setDrawMode(CENTER)
+        self.assertEqual((r.centerX, r.centerY), (10, 20))
+
+
+class PolygonDrawModeTests(unittest.TestCase):
+    def test_polygon_bounds_center(self):
+        p = PolygonSprite(10, 10, numSides=5, radius=4)
+        # default CENTER
+        self.assertEqual((p.left,p.right,p.bottom,p.top), (6,14,6,14))
+
+    def test_polygon_bounds_corner(self):
+        p = PolygonSprite(10, 10, numSides=5, radius=4)
+        p.setDrawMode(CORNER)
+        # box from (10,10) → (18,18)
+        self.assertEqual((p.left,p.right,p.bottom,p.top), (10,18,10,18))
+
+    def test_center_coordinates(self):
+        r = PolygonSprite(10, 20, 5, radius=7)
+        r.setDrawMode(CORNER)
+        self.assertEqual((r.centerX, r.centerY), (10+7, 20+7))
+
+        r.setDrawMode(CENTER)
+        self.assertEqual((r.centerX, r.centerY), (10, 20))
+
 if __name__ == '__main__':
     unittest.main()
