@@ -1340,8 +1340,8 @@ Sk.builtin.wasKeyPressed = function wasKeyPressed(code) {
     code = Sk.ffi.remapToJs(code);
     if (!Sk.PyAngelo.keyWasPressed.hasOwnProperty(code)) {
         return Sk.builtin.bool.false$;
-    } else if (Sk.PyAngelo.keyWasPressed[code]) {
-        Sk.PyAngelo.keyWasPressed[code] = false;
+    } else if (Sk.PyAngelo.keyWasPressed[code] === 1) {
+        Sk.PyAngelo.keyWasPressed[code] = 2;
         return Sk.builtin.bool.true$;
     } else {
         return Sk.builtin.bool.false$;
@@ -1941,13 +1941,30 @@ Sk.PyAngelo.preparePage = function() {
     function _keydown(ev) {
         ev.preventDefault();
         Sk.PyAngelo.keys[ev.code] = true;
-        Sk.PyAngelo.keyWasPressed[ev.code] = true;
+        const key = ev.code;
+        if (shouldRegisterPress(key)) {
+            markPressed(key);
+        }
+    }
+    function isFirstPress(key) {
+        // hasn’t seen this key before at all
+        return !Sk.PyAngelo.keyWasPressed.hasOwnProperty(key);
+    }
+    function isReleased(key) {
+        // we tracked it, but it’s currently up
+        return Sk.PyAngelo.keyWasPressed[key] === 0;
+    }
+    function markPressed(key) {
+        Sk.PyAngelo.keyWasPressed[key] = 1;
+    }
+    function shouldRegisterPress(key) {
+        return isFirstPress(key) || isReleased(key);
     }
 
     function _keyup(ev) {
         ev.preventDefault();
         Sk.PyAngelo.keys[ev.code] = false;
-        Sk.PyAngelo.keyWasPressed[ev.code] = false;
+        Sk.PyAngelo.keyWasPressed[ev.code] = 0;
     }
 
     function _resizeWindowVars(ev) {
