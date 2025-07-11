@@ -95,5 +95,33 @@ class TestDeltaTimer(unittest.TestCase):
         # repr reflects paused state
         self.assertEqual(repr(timer), '<DeltaTimer fps=30.0 paused=True>')
 
+    def test_raw_fps(self):
+        # With averaged=False, getFps() == 1 / last_dt
+        timer = deltaTimer.DeltaTimer(fps=10, smoothing=5)
+        timer._last_dt = 0.2   # simulate a 0.2s frame
+        self.assertAlmostEqual(timer.getFps(averaged=False), 5.0)
+
+    def test_average_fps_with_history(self):
+        # With averaged=True, FPS == 1 / mean(dt_history)
+        timer = deltaTimer.DeltaTimer(fps=60, smoothing=3)
+        # push three frame‐times: 0.5s, 0.25s, 0.75s -> mean dt = 0.5
+        timer._dt_history.extend([0.5, 0.25, 0.75])
+        self.assertAlmostEqual(timer.getFps(averaged=True), 2.0)
+
+    def test_average_fps_without_history(self):
+        # If history is empty, averaged=True falls back to last_dt
+        timer = deltaTimer.DeltaTimer(fps=30, smoothing=3)
+        # initial last_dt == 1/30
+        expected_fps = 30.0
+        self.assertAlmostEqual(timer.getFps(averaged=True), expected_fps, places=2)
+
+    def test_zero_dt(self):
+        # dt == 0 should never divide-by-zero; getFps returns 0.0
+        timer = deltaTimer.DeltaTimer(fps=60, smoothing=3)
+        timer._last_dt = 0.0
+        timer._dt_history.extend([0.0, 0.0, 0.0])
+        self.assertEqual(timer.getFps(averaged=False), 0.0)
+        self.assertEqual(timer.getFps(averaged=True), 0.0)
+
 if __name__ == '__main__':
     unittest.main()
