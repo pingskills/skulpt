@@ -74,3 +74,12 @@ class DeltaTimer:
             mean_dt = self._last_dt
 
         return 1.0 / mean_dt if mean_dt > 0 else 0.0
+
+    def tick(self):
+        """
+        Combines enforceFps() and update(),
+        returning the raw dt in seconds.
+        """
+        self.enforceFps()
+        dt = self.update()
+        return dt

@@ -123,5 +123,23 @@ class TestDeltaTimer(unittest.TestCase):
         self.assertEqual(timer.getFps(averaged=False), 0.0)
         self.assertEqual(timer.getFps(averaged=True), 0.0)
 
+    def test_tick_combines_update_and_enforce_fps(self):
+        # __init__ at 100.0s, update() at 100.2s, enforceFps() at 100.22s
+        fake = FakeTimeSleep(times=[100.0, 100.2, 100.22])
+        deltaTimer.time  = fake.time
+        deltaTimer.sleep = fake.sleep
+
+        timer = deltaTimer.DeltaTimer(fps=60)
+        dt = timer.tick()
+
+        # dt should be the delta between init and update
+        self.assertAlmostEqual(dt, 0.2, places=3)
+
+        # work_time = 0.02s, frame_target = 1/60≈0.0167, so no sleep
+        self.assertEqual(fake.slept, [])
+
+        # after a full tick, frame_start should be reset
+        self.assertIsNone(timer._frame_start)
+
 if __name__ == '__main__':
     unittest.main()
