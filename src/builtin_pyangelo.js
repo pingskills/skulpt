@@ -23,29 +23,29 @@ function inCartesianMode() {
     return Sk.PyAngelo.yAxisMode === Sk.PyAngelo.CARTESIAN;
 }
 
-Sk.builtin.setCanvasSize = function setCanvasSize(w, h, yAxisMode) {
+Sk.builtin.setCanvasSize = function setCanvasSize(width, height, yAxisMode) {
     Sk.builtin.pyCheckArgsLen("setCanvasSize", arguments.length, 2, 3);
-    Sk.builtin.pyCheckType("w", "integer", Sk.builtin.checkInt(w));
-    Sk.builtin.pyCheckType("h", "integer", Sk.builtin.checkInt(h));
+    Sk.builtin.pyCheckType("width", "integer", Sk.builtin.checkInt(width));
+    Sk.builtin.pyCheckType("height", "integer", Sk.builtin.checkInt(height));
     Sk.builtin.pyCheckType("yAxisMode", "integer", Sk.builtin.checkInt(yAxisMode));
 
     // Update the global variables
-    Sk.builtins.width = Sk.ffi.remapToPy(w);
-    Sk.builtins.height = Sk.ffi.remapToPy(h);
+    Sk.builtins.width = width;
+    Sk.builtins.height = height;
 
     // Change the actual canvas
     Sk.PyAngelo.canvas.style.display = "block";
-    Sk.PyAngelo.canvas.width = Sk.ffi.remapToJs(w);
-    Sk.PyAngelo.canvas.height = Sk.ffi.remapToJs(h);
+    Sk.PyAngelo.canvas.width = Sk.ffi.remapToJs(width);
+    Sk.PyAngelo.canvas.height = Sk.ffi.remapToJs(height);
     Sk.PyAngelo.canvas.focus();
 
     // Set up the y axis
-    yAxisMode = Sk.ffi.remapToJs(yAxisMode);
-    Sk.PyAngelo.yAxisMode = yAxisMode;
+    const yAxisModeJs = Sk.ffi.remapToJs(yAxisMode);
+    Sk.PyAngelo.yAxisMode = yAxisModeJs;
     if (inCartesianMode()) {
-        Sk.PyAngelo.ctx.transform(1, 0, 0, -1, 0, h);
+        Sk.PyAngelo.ctx.setTransform(1, 0, 0, -1, 0, height);
     } else {
-        Sk.PyAngelo.ctx.transform(1, 0, 0, 1, 0, 0);
+        Sk.PyAngelo.ctx.setTransform(1, 0, 0, 1, 0, 0);
         Sk.PyAngelo.yAxisMode = Sk.PyAngelo.JAVASCRIPT;
     }
 };
@@ -58,9 +58,118 @@ Sk.builtins["setCanvasSize"] = new Sk.builtin.sk_method(
             NamedArgs: [null, null, "yAxisMode"],
             Defaults: [1],
         },
-        $textsig: "($module, w, h, yAxisMode /)",
+        $textsig: "($module, width, height, yAxisMode /)",
         $doc:
             "Sets the size of the canvas that all drawings are written to. The first parameter specifies the width in pixels and the second the height. The thrid parameter specifies the direction of the y axis. The constant CARTESIAN can be used to specify the y axis acts like a regular cartesian plane in maths, and JAVASCRIPT can be used to specify a traditional javascript y-axis that moves down the screen. The default value for yAxisMode is CARTESIAN.",
+    },
+    null,
+    "builtins"
+);
+
+Sk.builtin.setVirtualCanvasSize = function setVirtualCanvasSize(canvasWidth, canvasHeight, virtualWidth, virtualHeight, yAxisMode) {
+    Sk.builtin.pyCheckArgsLen("setVirtualCanvasSize", arguments.length, 4, 5);
+
+    Sk.builtin.pyCheckType("canvasWidth", "integer", Sk.builtin.checkInt(canvasWidth));
+    Sk.builtin.pyCheckType("canvasHeight", "integer", Sk.builtin.checkInt(canvasHeight));
+    Sk.builtin.pyCheckType("virtualWidth", "integer", Sk.builtin.checkInt(virtualWidth));
+    Sk.builtin.pyCheckType("virtualHeight", "integer", Sk.builtin.checkInt(virtualHeight));
+    Sk.builtin.pyCheckType("yAxisMode", "integer", Sk.builtin.checkInt(yAxisMode));
+
+    Sk.builtins.width = canvasWidth;
+    Sk.builtins.height = canvasHeight;
+    Sk.builtins.virtualWidth = virtualWidth;
+    Sk.builtins.virtualHeight = virtualHeight;
+
+    const canvasWidthJs = Sk.ffi.remapToJs(canvasWidth);
+    const canvasHeightJs = Sk.ffi.remapToJs(canvasHeight);
+    const virtualWidthJs = Sk.ffi.remapToJs(virtualWidth);
+    const virtualHeightJs = Sk.ffi.remapToJs(virtualHeight);
+    const yAxisModeJs = Sk.ffi.remapToJs(yAxisMode);
+
+    Sk.PyAngelo.canvas.style.display = "block";
+    Sk.PyAngelo.canvas.width = canvasWidthJs;
+    Sk.PyAngelo.canvas.height = canvasHeightJs;
+    Sk.PyAngelo.canvas.focus();
+
+    // 2) Compute scaling and centering
+    const scaleX = canvasWidthJs / virtualWidthJs;
+    const scaleY = canvasHeightJs / virtualHeightJs;
+    const scale = Math.min(scaleX, scaleY);
+
+    const offsetX = (canvasWidthJs - virtualWidthJs * scale) / 2;
+    const offsetY = (canvasHeightJs - virtualHeightJs * scale) / 2;
+
+    // 3) Reset transform
+    Sk.PyAngelo.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    Sk.PyAngelo.ctx.fillStyle = "rgba(40, 42, 54, 1)";
+    Sk.PyAngelo.ctx.fillRect(0, 0, canvasWidthJs, canvasHeightJs);
+
+    // 4) Apply scale and letterbox offsets
+    Sk.PyAngelo.ctx.translate(offsetX, offsetY);
+    Sk.PyAngelo.ctx.scale(scale, scale);
+
+    // 5) Handle y-axis mode
+    Sk.PyAngelo.yAxisMode = yAxisModeJs;
+    if (inCartesianMode()) {
+        Sk.PyAngelo.ctx.transform(1, 0, 0, -1, 0, virtualHeightJs);  // use virtualHeight here
+    }
+    Sk.PyAngelo.ctx.beginPath();
+    Sk.PyAngelo.ctx.rect(0, 0, virtualWidthJs, virtualHeightJs);
+    Sk.PyAngelo.ctx.fillStyle = "rgb(220, 220, 220)";
+    Sk.PyAngelo.ctx.clip();
+};
+
+
+Sk.builtins["setVirtualCanvasSize"] = new Sk.builtin.sk_method(
+    {
+        $meth: Sk.builtin.setVirtualCanvasSize,
+        $name: "setVirtualCanvasSize",
+        $flags: {
+            NamedArgs: [null, null, null, null, "yAxisMode"],
+            Defaults: [1],
+        },
+        $textsig: "($module, canvasWidth, canvasHeight, virtualWidth, virtualHeight, yAxisMode /)",
+        $doc:
+            "setVirtualCanvasSize(cw, ch, vw, vh, yAxisMode)" +
+            " Sets up a virtual resolution for your canvas while automatically scaling" +
+            " and letterboxing to fit the physical canvas size." +
+            " - The physical canvas size is set to (cw, ch) in pixels." +
+            " - The virtual coordinate system is set to (vw, vh)." +
+            " - All drawing commands will be transformed so that you can draw using" +
+            "   the virtual resolution while preserving the aspect ratio." +
+            " - If the aspect ratios differ, black bars (letterboxing or pillarboxing)" +
+            "   will be applied automatically to maintain the correct scale." +
+            " - The y-axis mode can be set to either JAVASCRIPT or CARTESIAN:" +
+            "   - JAVASCRIPT: origin (0,0) is at the top-left, y increases downward." +
+            "   - CARTESIAN: origin (0,0) is at the bottom-left, y increases upward." +
+            " This replaces setCanvasSize() — you do not need to call both." +
+            " Example:" +
+            "   setVirtualCanvasSize(800, 600, 400, 300, CARTESIAN)" +
+            " @param {int} cw - The width of the physical canvas in pixels." +
+            " @param {int} ch - The height of the physical canvas in pixels." +
+            " @param {int} vw - The width of the virtual canvas coordinates." +
+            " @param {int} vh - The height of the virtual canvas coordinates." +
+            " @param {int} yAxisMode - Either JAVASCRIPT or CARTESIAN.",
+    },
+    null,
+    "builtins"
+);
+
+Sk.builtin.setImageSmoothing = function setImageSmoothing(enabled) {
+    Sk.builtin.pyCheckArgsLen("setImageSmoothing", arguments.length, 1, 1);
+    Sk.builtin.pyCheckType("enabled", "bool", Sk.builtin.checkBool(enabled));
+    const jsEnabled = Sk.ffi.remapToJs(enabled);
+    Sk.PyAngelo.ctx.imageSmoothingEnabled = jsEnabled;
+    return Sk.builtin.none.none$;
+};
+
+Sk.builtins["setImageSmoothing"] = new Sk.builtin.sk_method(
+    {
+        $meth: Sk.builtin.setImageSmoothing,
+        $name: "setImageSmoothing",
+        $flags: { OneArg: true },
+        $textsig: "($module, enabled /)",
+        $doc: "Enables or disables image smoothing when scaling images. Pass True to enable smoothing or False for pixelated scaling."
     },
     null,
     "builtins"
@@ -1877,6 +1986,8 @@ Sk.PyAngelo.reset = function() {
     Sk.PyAngelo.textBaseline = Sk.PyAngelo.BOTTOM;
     Sk.builtins.width = new Sk.builtin.int_(0);
     Sk.builtins.height = new Sk.builtin.int_(0);
+    Sk.builtins.virtualWidth = new Sk.builtin.int_(0);
+    Sk.builtins.virtualHeight = new Sk.builtin.int_(0);
     Sk.builtins.mouseX = new Sk.builtin.int_(0);
     Sk.builtins.mouseY = new Sk.builtin.int_(0);
     Sk.builtins.mouseIsPressed = Sk.builtin.bool.false$;

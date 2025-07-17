@@ -19,7 +19,6 @@ class ImageTestCase(unittest.TestCase):
         self.assertEqual(self.img.opacity, 1.0)
         self.assertEqual(self.img.rotation, 0)
         self.assertEqual(self.img.scale, [1.0, 1.0])
-        self.assertIsInstance(self.img.smoothing, bool)
         w, h = self.img.width, self.img.height
         self.assertIsInstance(w, int)
         self.assertIsInstance(h, int)
@@ -58,15 +57,6 @@ class ImageTestCase(unittest.TestCase):
             self.img.setScale("wide")
         with self.assertRaises(TypeError):
             self.img.setScale(2, "tall")
-
-    def test_setSmoothing(self):
-        orig = self.img.smoothing
-        self.img.setSmoothing(0)
-        self.assertFalse(self.img.smoothing)
-        self.img.setSmoothing(1)
-        self.assertTrue(self.img.smoothing)
-        with self.assertRaises(TypeError):
-            self.img.setSmoothing("yes")
 
     def test_setFrameSize(self):
         w, h = self.img.width, self.img.height
@@ -107,7 +97,6 @@ class ImageTestCase(unittest.TestCase):
 
     def test_str_and_getattr(self):
         s = str(self.img)
-        # must include size, opacity, rotation, scale, smoothing, frame, flip
         self.assertIn(f"size={self.img.width}x{self.img.height}", s)
         self.assertIn(f"opacity={self.img.opacity}", s)
         self.assertIn(f"scale={self.img.scale[0]},{self.img.scale[1]}", s)

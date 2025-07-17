@@ -38,7 +38,6 @@ const initMethod = function (self, file) {
                 self._flipX = false;
                 self._flipY = false;
                 const ctx = Sk.PyAngelo.ctx;
-                self._smoothing = ctx.imageSmoothingEnabled;
                 Sk.PyAngelo.images[this.file] = this;
                 resolve(Sk.builtin.none.none$);
             };
@@ -90,16 +89,6 @@ const setScaleMethod = function(self, scaleX, scaleY) {
 setScaleMethod.co_varnames = ["self", "scaleX", "scaleY"];
 setScaleMethod.$defaults = [Sk.builtin.none.none$];
 setScaleMethod.co_argcount = 3;
-
-// setSmoothing implementation
-const setSmoothingMethod = function(self, flag) {
-    Sk.builtin.pyCheckArgsLen("setSmoothing", arguments.length, 2, 2);
-    Sk.builtin.pyCheckType("flag", "number", Sk.builtin.checkNumber(flag));
-    self._smoothing = !!Sk.ffi.remapToJs(flag);
-    return Sk.builtin.none.none$;
-};
-setSmoothingMethod.co_varnames = ["self", "flag"];
-setSmoothingMethod.co_argcount = 2;
 
 // setFrameSize implementation
 const setFrameSizeMethod = function(self, frameW, frameH) {
@@ -174,16 +163,6 @@ setPivotMethod.$defaults = [ Sk.builtin.none.none$ ];
 // Argument names for introspection
 setPivotMethod.co_varnames = ["self", "ox", "oy"];
 
-
-
-// Helpers
-/**
- * Prepare the canvas context with smoothing settings.
- */
-function prepareContext(ctx, smoothing) {
-    ctx.imageSmoothingEnabled = smoothing;
-}
-
 /**
  * Apply flips, rotation, scaling, and origin adjustments.
  */
@@ -227,10 +206,8 @@ const drawMethod = function(self, x, y, width, height) {
     }
     const ctx = Sk.PyAngelo.ctx;
     const prevAlpha = ctx.globalAlpha;
-    const prevSmoothing = ctx.imageSmoothingEnabled;
     ctx.globalAlpha = self.opacity;
     ctx.save();
-    prepareContext(ctx, self._smoothing);
     if (inCartesianMode()) {
         ctx.translate(x, y);
         ctx.transform(1, 0, 0, -1, 0, height);
@@ -243,7 +220,6 @@ const drawMethod = function(self, x, y, width, height) {
     }
     ctx.restore();
     ctx.globalAlpha = prevAlpha;
-    ctx.imageSmoothingEnabled = prevSmoothing;
     return Sk.builtin.none.none$;
 };
 drawMethod.co_varnames = ["self", "x", "y", "width", "height"];
@@ -272,10 +248,8 @@ const drawRegionMethod = function(self, sx, sy, sw, sh, dx, dy, dw, dh) {
     }
     const ctx = Sk.PyAngelo.ctx;
     const prevAlpha = ctx.globalAlpha;
-    const prevSmoothing = ctx.imageSmoothingEnabled;
     ctx.globalAlpha = self.opacity;
     ctx.save();
-    prepareContext(ctx, self._smoothing);
     if (inCartesianMode()) {
         ctx.translate(dx, dy);
         ctx.transform(1, 0, 0, -1, 0, dh);
@@ -288,7 +262,6 @@ const drawRegionMethod = function(self, sx, sy, sw, sh, dx, dy, dw, dh) {
     }
     ctx.restore();
     ctx.globalAlpha = prevAlpha;
-    ctx.imageSmoothingEnabled = prevSmoothing;
     return Sk.builtin.none.none$;
 };
 
@@ -340,7 +313,6 @@ const imageClass = function($gbl,$loc) {
     $loc.setOpacity    = new Sk.builtin.func(setOpacityMethod);
     $loc.setRotation   = new Sk.builtin.func(setRotationMethod);
     $loc.setScale      = new Sk.builtin.func(setScaleMethod);
-    $loc.setSmoothing  = new Sk.builtin.func(setSmoothingMethod);
     $loc.setFrameSize  = new Sk.builtin.func(setFrameSizeMethod);
     $loc.setFlipX      = new Sk.builtin.func(setFlipXMethod);
     $loc.setFlipY      = new Sk.builtin.func(setFlipYMethod);
@@ -352,15 +324,14 @@ const imageClass = function($gbl,$loc) {
     
     $loc.__repr__     = new Sk.builtin.func(self => new Sk.builtin.str(`Image(${self.file})`));
     $loc.__str__      = new Sk.builtin.func(self => new Sk.builtin.str(
-        `Image(${self.file}) size=${self.width}x${self.height} opacity=${self.opacity} rotation=${self._rotation} scale=${self._scaleX},${self._scaleY} smoothing=${self._smoothing} frame=${self._frameW}x${self._frameH} flip=${self._flipX},${self._flipY}`
+        `Image(${self.file}) size=${self.width}x${self.height} opacity=${self.opacity} rotation=${self._rotation} scale=${self._scaleX},${self._scaleY} frame=${self._frameW}x${self._frameH} flip=${self._flipX},${self._flipY}`
     ));
     $loc.__getattr__  = new Sk.builtin.func((self,key) => {
         key = Sk.ffi.remapToJs(key);
-        if (["width","height","file","opacity","rotation","scale","smoothing","frameW","frameH","columns","rows","flipX","flipY"].includes(key)) {
+        if (["width","height","file","opacity","rotation","scale","frameW","frameH","columns","rows","flipX","flipY"].includes(key)) {
             switch(key) {
                 case "rotation":  return Sk.ffi.remapToPy(self._rotation);
                 case "scale":     return Sk.ffi.remapToPy([self._scaleX, self._scaleY]);
-                case "smoothing": return Sk.ffi.remapToPy(self._smoothing);
                 case "frameW":    return Sk.ffi.remapToPy(self._frameW);
                 case "frameH":    return Sk.ffi.remapToPy(self._frameH);
                 case "columns":   return Sk.ffi.remapToPy(self._columns);
@@ -391,8 +362,6 @@ const imageClass = function($gbl,$loc) {
                 }
                 return setScaleMethod(self, value);
             }
-            case "smoothing":
-                return setSmoothingMethod(self, value);
             case "frameW":
             case "frameH":
                 // redirect to setFrameSize for simplicity
@@ -422,7 +391,6 @@ Methods:
   setOpacity(alpha): set global opacity 0.0–1.0.
   setRotation(angle): set rotation in radians or degrees based on angleMode.
   setScale(sx[, sy]): set scale factors.
-  setSmoothing(flag): enable/disable pixel-art smoothing.
   setFrameSize(frameW, frameH): define frame dimensions.
   setFlipX(flag): flip horizontally.
   setFlipY(flag): flip vertically.
