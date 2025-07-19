@@ -226,9 +226,9 @@ drawMethod.co_varnames = ["self", "x", "y", "width", "height"];
 drawMethod.$defaults = [Sk.builtin.none.none$, Sk.builtin.none.none$];
 drawMethod.co_argcount = 5;
 
-// draw sub-region
+// draw subRegion
 const drawRegionMethod = function(self, sx, sy, sw, sh, dx, dy, dw, dh) {
-    Sk.builtin.pyCheckArgsLen("drawRegion", arguments.length, 8, 9);
+    Sk.builtin.pyCheckArgsLen("drawRegion", arguments.length, 9, 9);
     [sx, sy, sw, sh, dx, dy, dw, dh].forEach(arg => {
         if ((arg !== undefined) && (arg !== Sk.builtin.none.none$)) {
             Sk.builtin.pyCheckType("number", "number", Sk.builtin.checkNumber(arg));
@@ -268,6 +268,19 @@ const drawRegionMethod = function(self, sx, sy, sw, sh, dx, dy, dw, dh) {
 drawRegionMethod.co_varnames = ["self","sx","sy","sw","sh","dx","dy","dw","dh"];
 drawRegionMethod.$defaults = [ Sk.builtin.none.none$, Sk.builtin.none.none$ ];
 drawRegionMethod.co_argcount = 9;
+
+// drawSubImage
+const drawSubImageMethod = function(self, subImage, dx, dy, dw, dh) {
+    Sk.builtin.pyCheckArgsLen("drawSubImage", arguments.length, 6, 6);
+    [subImage.x, subImage.y, subImage.width, subImage.height].forEach(arg => {
+        Sk.builtin.pyCheckType("number", "number", Sk.builtin.checkNumber(arg));
+    });
+    return drawRegionMethod(self, subImage.x, subImage.y, subImage.width, subImage.height, dx, dy, dw, dh);
+};
+
+drawSubImageMethod.co_varnames = ["self","subImage","dx","dy","dw","dh"];
+drawSubImageMethod.$defaults = [ Sk.builtin.none.none$, Sk.builtin.none.none$ ];
+drawSubImageMethod.co_argcount = 6;
 
 // draw single frame from spritesheet
 const drawFrameMethod = function(self, frameIndex, x, y, scaleW, scaleH) {
@@ -319,6 +332,7 @@ const imageClass = function($gbl,$loc) {
     $loc.setPivot      = new Sk.builtin.func(setPivotMethod);
     $loc.draw          = new Sk.builtin.func(drawMethod);
     $loc.drawRegion    = new Sk.builtin.func(drawRegionMethod);
+    $loc.drawSubImage  = new Sk.builtin.func(drawSubImageMethod);
     $loc.drawFrame     = new Sk.builtin.func(drawFrameMethod);
     $loc.dispose       = new Sk.builtin.func(disposeMethod);
     
@@ -399,3 +413,61 @@ Methods:
   drawRegion(sx,sy,sw,sh,dx,dy[,dw,dh]): draw sub-region.
   drawFrame(index,x,y[,scaleW,scaleH]): draw specific frame.
   dispose() – Release the image’s underlying resources and remove it from memory.`;
+
+// SubImage Class
+// __init__ implementation
+const subImageInitMethod = function (self, x, y, width, height) {
+    Sk.builtin.pyCheckArgsLen("__init__", arguments.length, 5, 5);
+    Sk.builtin.pyCheckType("x", "integer", Sk.builtin.checkInt(x));
+    Sk.builtin.pyCheckType("y", "integer", Sk.builtin.checkInt(y));
+    Sk.builtin.pyCheckType("width", "integer", Sk.builtin.checkInt(width));
+    Sk.builtin.pyCheckType("height", "integer", Sk.builtin.checkInt(height));
+    const xJs = Sk.ffi.remapToJs(x), yJs = Sk.ffi.remapToJs(y);
+    if (xJs < 0 || yJs < 0) {
+        throw new Sk.builtin.ValueError("SubImage x and y must be positive");
+    }
+    const w = Sk.ffi.remapToJs(width), h = Sk.ffi.remapToJs(height);
+    if (w <= 0 || h <= 0) {
+        throw new Sk.builtin.ValueError("SubImage width and height must be positive");
+    }
+    self.x = x;
+    self.y = y;
+    self.width = width;
+    self.height = height;
+};
+
+const subImageClass = function($gbl,$loc) {
+    $loc.__init__ = new Sk.builtin.func(subImageInitMethod);
+    $loc.__repr__ = new Sk.builtin.func(self => new Sk.builtin.str(`SubImage(${Sk.ffi.remapToJs(self.x)}, ${Sk.ffi.remapToJs(self.y)}, ${Sk.ffi.remapToJs(self.width)}, ${Sk.ffi.remapToJs(self.height)})`));
+    $loc.__getattr__ = new Sk.builtin.func((self, keyObj) => {
+        const key = Sk.ffi.remapToJs(keyObj);
+        switch (key) {
+            case "x":      return self.x;
+            case "y":      return self.y;
+            case "width":  return self.width;
+            case "height": return self.height;
+            default: throw new Sk.builtin.AttributeError(`SubImage has no attribute '${key}'`);
+        }
+    });
+    $loc.__setattr__ = new Sk.builtin.func(function(self, keyObj, value) {
+        const key = Sk.ffi.remapToJs(keyObj);
+        // Only intercept the four region fields
+        if (key === "x" || key === "y" || key === "width" || key === "height") {
+            Sk.builtin.pyCheckType(key, "integer", Sk.builtin.checkInt(value));
+            const vJs = Sk.ffi.remapToJs(value);
+            if ((key === "x" || key === "y") && vJs < 0) {
+                throw new Sk.builtin.ValueError("SubImage " + key + " must be positive");
+            }
+            if ((key === "width" || key === "height") && vJs <= 0) {
+                throw new Sk.builtin.ValueError("SubImage " + key + " must be positive");
+            }
+            self[key] = value;
+            return Sk.builtin.none.none$;
+        }
+        // Fallback to normal Python setattr for anything else
+        return Sk.builtin.object.prototype.tp$setattr.call(self, keyObj, value);
+    });
+};
+Sk.builtin.SubImage = subImageClass;
+Sk.builtins["SubImage"] = Sk.misceval.buildClass(Sk.builtin,Sk.builtin.SubImage,"SubImage",[]);
+Sk.builtins["SubImage"].prototype.$doc = "Represents a sub image defined by a rectangle via x, y, width and height.";
