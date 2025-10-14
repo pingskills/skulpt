@@ -330,12 +330,12 @@ class TextSprite(Transformable):
     def __repr__(self):
         return (f"TextSprite(text='{self._textContent}', x={self.x}, y={self.y}, "
                 f"fontSize={self._fontSize}, fontName='{self._fontName}', "
-                f"fill=({self._fillR},{self._fillG},{self._fillB},{self.opacity}))")
+                f"fill=({self.fillColour.red},{self.fillColour.green},{self.fillColour.blue},{self.fillColour.alpha}))")
 
     def __str__(self):
         return (f"TextSprite - '{self._textContent}' at ({self.x},{self.y}), "
                 f"size=({self.width},{self.height}), font={self.fontName} {self.fontSize}, "
-                f"fill=({self._fillR},{self._fillG},{self._fillB},{self.opacity})")
+                f"fill=({self.fillColour.red},{self.fillColour.green},{self.fillColour.blue},{self.fillColour.alpha})")
 
 # --- Base for fillable and stroking shapes ---
 class ShapeSprite(Transformable):
