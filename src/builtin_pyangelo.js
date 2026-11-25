@@ -1422,12 +1422,14 @@ Sk.builtins["getPixelColour"] = new Sk.builtin.sk_method(
 
 // Some key constants stand for more than one physical key. KEY_1 is
 // "Digit1" (the top row) but the 1 on the number pad ("Numpad1") counts too.
-Sk.PyAngelo.KEY_ALIASES = {};
+// Null prototype so names like "constructor" or "__proto__" aren't found.
+Sk.PyAngelo.KEY_ALIASES = Object.create(null);
 for (let i = 0; i <= 9; i++) {
     Sk.PyAngelo.KEY_ALIASES["Digit" + i] = ["Digit" + i, "Numpad" + i];
 }
 Sk.PyAngelo.codesFor = function codesFor(code) {
-    return Sk.PyAngelo.KEY_ALIASES[code] || [code];
+    const aliases = Sk.PyAngelo.KEY_ALIASES;
+    return Object.prototype.hasOwnProperty.call(aliases, code) ? aliases[code] : [code];
 };
 
 Sk.builtin.isKeyPressed = function isKeyPressed(code) {
