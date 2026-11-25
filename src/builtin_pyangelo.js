@@ -1420,14 +1420,24 @@ Sk.builtins["getPixelColour"] = new Sk.builtin.sk_method(
     "builtins"
 );
 
+// Some key constants stand for more than one physical key. KEY_1 is
+// "Digit1" (the top row) but the 1 on the number pad ("Numpad1") counts too.
+Sk.PyAngelo.KEY_ALIASES = {};
+for (let i = 0; i <= 9; i++) {
+    Sk.PyAngelo.KEY_ALIASES["Digit" + i] = ["Digit" + i, "Numpad" + i];
+}
+Sk.PyAngelo.codesFor = function codesFor(code) {
+    return Sk.PyAngelo.KEY_ALIASES[code] || [code];
+};
+
 Sk.builtin.isKeyPressed = function isKeyPressed(code) {
     Sk.builtin.pyCheckArgsLen("isKeyPressed", arguments.length, 1, 1);
     Sk.builtin.pyCheckType("code", "string", Sk.builtin.checkString(code));
     code = Sk.ffi.remapToJs(code);
-    if (!Sk.PyAngelo.keys.hasOwnProperty(code)) {
-        return Sk.builtin.bool.false$;
-    }
-    return Sk.ffi.remapToPy(Sk.PyAngelo.keys[code]);
+    const pressed = Sk.PyAngelo.codesFor(code).some(
+        (c) => Sk.PyAngelo.keys[c] === true
+    );
+    return Sk.ffi.remapToPy(pressed);
 };
 
 Sk.builtins["isKeyPressed"] = new Sk.builtin.sk_method(
@@ -1447,14 +1457,13 @@ Sk.builtin.wasKeyPressed = function wasKeyPressed(code) {
     Sk.builtin.pyCheckArgsLen("wasKeyPressed", arguments.length, 1, 1);
     Sk.builtin.pyCheckType("code", "string", Sk.builtin.checkString(code));
     code = Sk.ffi.remapToJs(code);
-    if (!Sk.PyAngelo.keyWasPressed.hasOwnProperty(code)) {
-        return Sk.builtin.bool.false$;
-    } else if (Sk.PyAngelo.keyWasPressed[code] === 1) {
-        Sk.PyAngelo.keyWasPressed[code] = 2;
-        return Sk.builtin.bool.true$;
-    } else {
-        return Sk.builtin.bool.false$;
+    for (const c of Sk.PyAngelo.codesFor(code)) {
+        if (Sk.PyAngelo.keyWasPressed[c] === 1) {
+            Sk.PyAngelo.keyWasPressed[c] = 2;
+            return Sk.builtin.bool.true$;
+        }
     }
+    return Sk.builtin.bool.false$;
 };
 
 Sk.builtins["wasKeyPressed"] = new Sk.builtin.sk_method(
@@ -1812,6 +1821,10 @@ Sk.PyAngelo.reset = function() {
     Sk.builtins.KEY_X = new Sk.builtin.str("KeyX");
     Sk.builtins.KEY_Y = new Sk.builtin.str("KeyY");
     Sk.builtins.KEY_Z = new Sk.builtin.str("KeyZ");
+    // Number keys. The number pad keys count too (see Sk.PyAngelo.KEY_ALIASES).
+    for (let i = 0; i <= 9; i++) {
+        Sk.builtins["KEY_" + i] = new Sk.builtin.str("Digit" + i);
+    }
     Sk.builtins.KEY_SPACE = new Sk.builtin.str("Space");
     Sk.builtins.KEY_ENTER = new Sk.builtin.str("Enter");
     Sk.builtins.KEY_ESC = new Sk.builtin.str("Escape");
